@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
 
 interface SearchResult {
@@ -213,7 +213,7 @@ export default function HomePage() {
                       </div>
                       
                       <p className="text-gray-300 mb-3">{result.summary}</p>
-                      <p className="text-blue-300 text-sm italic">"{result.snippet}"</p>
+                      <p className="text-blue-300 text-sm italic">{result.snippet}</p>
                     </div>
                   ))}
                 </div>

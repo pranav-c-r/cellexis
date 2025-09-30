@@ -142,6 +142,34 @@ def link_gene_to_paper(gene_name: str, paper_title: str):
     return {"message": f"Linked Gene '{gene_name}' to Paper '{paper_title}'"}
 
 # -------------------------
+
+# GEMINI ENDPOINTS 
+# -------------------------
+from pydantic import BaseModel
+from gemini.gemini_utils import summarize, qa, safe_extract_kg
+
+class SummarizeRequest(BaseModel):
+    text: str
+
+class QARequest(BaseModel):
+    query: str
+    snippets: list[str]  # include [paper_id:page_num] in snippets
+
+class KGRequest(BaseModel):
+    text: str
+
+@app.post("/summarize")
+def summarize_paper(req: SummarizeRequest):
+    return summarize(req.text)
+
+@app.post("/qa")
+def qa_answer(req: QARequest):
+    return qa(req.query, req.snippets)
+
+@app.post("/extract_kg")
+def extract_kg(req: KGRequest):
+    return safe_extract_kg(req.text)
+=======
 # QUERY / SEARCH / GRAPH ENDPOINTS
 # -------------------------
 @app.get("/search")
@@ -228,6 +256,7 @@ def extract_kg(chunk_text: str = Body(...)):
         {"from": "paper1", "to": "Microgravity", "type": "PERFORMED_ON"},
         {"from": "paper1", "to": "ISS2025", "type": "CONDUCTED_IN"},
     ]
+
 
     with driver.session() as session:
         for entity_type, names in extracted_entities.items():

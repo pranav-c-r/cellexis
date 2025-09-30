@@ -169,7 +169,7 @@ def qa_answer(req: QARequest):
 @app.post("/extract_kg")
 def extract_kg(req: KGRequest):
     return safe_extract_kg(req.text)
-=======
+
 # QUERY / SEARCH / GRAPH ENDPOINTS
 # -------------------------
 @app.get("/search")

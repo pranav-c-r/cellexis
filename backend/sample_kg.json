@@ -1,0 +1,12 @@
+{
+  "paper_id": "paper50",
+  "entities": [
+    {"type":"Organism","name":"Arabidopsis thaliana","props":{"taxonomy_id":"3702"}},
+    {"type":"ExperimentType","name":"microgravity assay"},
+    {"type":"Mission","name":"ISS Expedition 65"}
+  ],
+  "relations": [
+    {"from_name":"microgravity assay","from_type":"ExperimentType","to_name":"Arabidopsis thaliana","to_type":"Organism","type":"PERFORMED_ON","props":{"page":2}},
+    {"from_name":"ISS Expedition 65","from_type":"Mission","to_name":"microgravity assay","to_type":"ExperimentType","type":"STUDIES","props":{}}
+  ]
+}

@@ -166,4 +166,31 @@ def link_gene_to_paper(gene_name: str, paper_title: str):
         """, gene_name=gene_name, paper_title=paper_title)
     return {"message": f"Linked Gene '{gene_name}' to Paper '{paper_title}'"}
 
+# -------------------------
+# GEMINI ENDPOINTS 
+# -------------------------
+from pydantic import BaseModel
+from gemini.gemini_utils import summarize, qa, safe_extract_kg
+
+class SummarizeRequest(BaseModel):
+    text: str
+
+class QARequest(BaseModel):
+    query: str
+    snippets: list[str]  # include [paper_id:page_num] in snippets
+
+class KGRequest(BaseModel):
+    text: str
+
+@app.post("/summarize")
+def summarize_paper(req: SummarizeRequest):
+    return summarize(req.text)
+
+@app.post("/qa")
+def qa_answer(req: QARequest):
+    return qa(req.query, req.snippets)
+
+@app.post("/extract_kg")
+def extract_kg(req: KGRequest):
+    return safe_extract_kg(req.text)
 

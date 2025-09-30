@@ -11,6 +11,8 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import CountUp from "@/components/ui/count-up";
 import { useToast } from "@/hooks/use-toast";
+import AstronautModel from "@/components/model/astronaut"
+import Stars from "@/components/ui/stars"
 
 const ASTRONAUT_URL =
   "https://cdn.builder.io/api/v1/image/assets%2F2c7b56b85f304d7c977ff7daf41b0b6b%2Fbb727473002c4b279783860445cd9b6f?format=webp&width=800";
@@ -19,11 +21,12 @@ export default function Index() {
   const { toast } = useToast();
 
   return (
-    <div className="bg-space">
+    <div className="">
+      <Stars />
       {/* Hero */}
-      <section className="relative min-h-[100vh] flex items-center">
-        <div className="container mx-auto grid lg:grid-cols-2 gap-10 items-center">
-          <div className="text-center lg:text-left">
+      <section className="relative min-h-[77vh] flex items-center">
+        <div className="container  mx-auto grid lg:grid-cols-2 gap-10 items-center">
+          <div className="relative z-50 text-center lg:text-left">
             <h1 className="text-[60px] leading-[60px]">
               <span
                 className="text-gradient"
@@ -50,12 +53,8 @@ export default function Index() {
               </Link>
             </div>
           </div>
-          <div className="relative flex justify-center lg:justify-end">
-            <img
-              src={ASTRONAUT_URL}
-              alt="Astronaut with plant DNA"
-              className="w-[70%] lg:w-[480px] xl:w-[560px] drop-shadow-[0_20px_80px_rgba(0,255,200,0.25)]"
-            />
+          <div className="absolute z-10 w-full flex justify-center lg:justify-end">
+            <AstronautModel />
           </div>
         </div>
       </section>

@@ -1,29 +1,61 @@
-import pandas as pd
-import json
 import os
+import re
+import pandas as pd
+from PyPDF2 import PdfReader
+import json
+
+METADATA_FILE = "backend/data/metadata2.csv"
+PAPERS_DIR = "backend/data/papers"
+OUTPUT_FILE = "backend/data/chunks.jsonl"
 
 # Load metadata
-df = pd.read_csv("metadata.csv")
+metadata_df = pd.read_csv(METADATA_FILE)
+metadata_df['paper_id'] = metadata_df['paper_id'].astype(str)
 
-# Output file
-output_file = "chunks.jsonl"
+def extract_paper_id(filename):
+    match = re.match(r"^(\d+)_", filename)
+    return match.group(1) if match else None
 
-# Function to split text into chunks of ~500 chars
-def chunk_text(text, chunk_size=500):
-    text = str(text).replace("\n", " ").strip()
-    return [text[i:i+chunk_size] for i in range(0, len(text), chunk_size)]
+with open(OUTPUT_FILE, "w", encoding="utf-8") as out_file:
+    for pdf_file in os.listdir(PAPERS_DIR):
+        if not pdf_file.endswith(".pdf"):
+            continue
 
-with open(output_file, "w", encoding="utf-8") as f:
-    for _, row in df.iterrows():
-        paper_id = row["paper_id"]
-        text = row["title"]  # use title since abstract not available
-        chunks = chunk_text(text)
-        for chunk in chunks:
-            json_obj = {
-                "paper_id": paper_id,
-                "text": chunk,
-                "source": "title"
-            }
-            f.write(json.dumps(json_obj, ensure_ascii=False) + "\n")
+        paper_id = extract_paper_id(pdf_file)
+        if paper_id is None:
+            print(f"⚠️ Could not extract paper_id from {pdf_file}, skipping.")
+            continue
 
-print(f"{output_file} created successfully!")
+        # Match metadata by paper_id
+        row = metadata_df[metadata_df['paper_id'] == paper_id]
+        if row.empty:
+            print(f"⚠️ No metadata found for {pdf_file}, skipping.")
+            continue
+
+        title = row.iloc[0]['title']
+
+        try:
+            reader = PdfReader(os.path.join(PAPERS_DIR, pdf_file))
+            for page_num, page in enumerate(reader.pages, start=1):
+                text = page.extract_text()
+                if not text:
+                    continue
+                # Split into 6 chunks per page
+                words = text.split()
+                chunk_size = max(1, len(words) // 6)
+                for i in range(6):
+                    chunk_words = words[i*chunk_size:(i+1)*chunk_size]
+                    if not chunk_words:
+                        continue
+                    chunk_text = " ".join(chunk_words)
+                    out_file.write(json.dumps({
+                        "paper_id": paper_id,
+                        "title": title,
+                        "page": page_num,
+                        "chunk_index": i,
+                        "text": chunk_text
+                    }, ensure_ascii=False) + "\n")
+        except Exception as e:
+            print(f"❌ Error reading {pdf_file}: {e}")
+
+print(f"✅ Finished creating {OUTPUT_FILE}")

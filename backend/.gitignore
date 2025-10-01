@@ -3,3 +3,6 @@ venv
 env
 ingestion/.venv
 ingestion/venv
+backend/data/papers/
+data/papers
+data/papers/

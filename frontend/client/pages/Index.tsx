@@ -24,7 +24,7 @@ export default function Index() {
     <div className="">
       <Stars />
       {/* Hero */}
-      <section className="relative min-h-[77vh] flex items-center">
+      <section id="home" className="relative min-h-[77vh] flex items-center">
         <div className="container  mx-auto grid lg:grid-cols-2 gap-10 items-center">
           <div className="relative z-50 text-center lg:text-left">
             <h1 className="text-[60px] leading-[60px]">
@@ -94,7 +94,7 @@ export default function Index() {
       </section>
 
       {/* Stats */}
-      <section className="py-20 font-sans">
+      <section id="statistics" className="py-20 font-sans">
         <div className="container mx-auto">
           <div className="grid gap-8 sm:grid-cols-3">
             <Stat
@@ -117,7 +117,7 @@ export default function Index() {
       </section>
 
       {/* Contact */}
-      <section className="py-24">
+      <section id="contact" className="py-24">
         <div className="container mx-auto grid lg:grid-cols-2 gap-12 items-start">
           <div>
             <h3

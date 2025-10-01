@@ -8,7 +8,7 @@ export default function Login() {
   const navigate = useNavigate();
 
   return (
-    <section className="bg-space min-h-[calc(100vh-64px-220px)] flex items-center">
+    <div className="bg-space min-h-screen flex items-center">
       <div className="container mx-auto grid place-items-center py-16">
         <div className="glass glow max-w-md w-full rounded-2xl p-8">
           <div className="text-center mb-8">
@@ -34,6 +34,6 @@ export default function Login() {
           </div>
         </div>
       </div>
-    </section>
+    </div>
   );
 }

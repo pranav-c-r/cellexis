@@ -1,4 +1,4 @@
-import { Link, NavLink, useLocation } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -7,52 +7,53 @@ const logoUrl =
 
 export default function Navbar() {
   const location = useLocation();
+  
+  const scrollToSection = (sectionId: string) => {
+    const element = document.getElementById(sectionId);
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
+
   const navItems = [
-    { to: "/", label: "Home" },
-    { to: "/features", label: "Features" },
-    { to: "/publications", label: "Publications" },
-    { to: "/contact", label: "Contact" },
+    { id: "home", label: "Home" },
+    { id: "features", label: "Features" },
+    { id: "statistics", label: "Statistics" },
+    { id: "contact", label: "Contact" },
   ];
 
   return (
-    <header className="fixed top-0 inset-x-0 z-50">
-      <div className="container mx-auto">
-        <div className="flex h-[82px] items-center justify-between gap-6">
+    <header className="fixed top-0 inset-x-0 z-50 bg-background/60 backdrop-blur border-b border-border/40">
+      <div className="container mx-auto px-4">
+        <div className="flex h-16 md:h-[82px] items-center justify-between gap-4">
           {/* Left: logo */}
-          <Link to="/" className="flex items-center gap-2 group">
+          <Link to="/" className="flex items-center gap-2 group flex-shrink-0">
             <img
               src={logoUrl}
               alt="Cellexis"
-              className="h-[126px] w-[116px] pb-[15px] object-contain"
+              className="h-8 md:h-[126px] w-auto md:w-[116px] md:pb-[15px] object-contain"
             />
             <span className="sr-only">Cellexis</span>
           </Link>
 
           {/* Center: nav */}
-          <nav className="hidden md:flex items-center gap-6 text-sm leading-5">
+          <nav className="hidden lg:flex items-center gap-4 xl:gap-6 text-sm leading-5">
             {navItems.map((item) => (
-              <NavLink
-                key={item.to}
-                to={item.to}
-                className={({ isActive }) =>
-                  cn(
-                    "transition-colors font-semibold",
-                    isActive
-                      ? "text-gradient"
-                      : "text-foreground hover:text-foreground",
-                  )
-                }
+              <button
+                key={item.id}
+                onClick={() => scrollToSection(item.id)}
+                className="transition-colors font-semibold text-foreground hover:text-foreground whitespace-nowrap"
               >
                 {item.label}
-              </NavLink>
+              </button>
             ))}
           </nav>
 
           {/* Right: Login */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 md:gap-3">
             <Button
               asChild
-              className="inline-flex h-11 px-8 rounded-[10px] font-semibold text-sm leading-5 bg-gradient-to-r from-primary via-accent to-secondary text-black glow"
+              className="inline-flex h-8 md:h-11 px-4 md:px-8 rounded-[10px] font-semibold text-xs md:text-sm leading-5 bg-gradient-to-r from-primary via-accent to-secondary text-black glow"
             >
               <Link to="/login">Login</Link>
             </Button>

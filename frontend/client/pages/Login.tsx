@@ -2,15 +2,35 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
+import LiquidEther from "@/components/ui/liquid-ether";
 
 export default function Login() {
   const [username, setUsername] = useState("");
   const navigate = useNavigate();
 
   return (
-    <div className="bg-space min-h-screen flex items-center">
-      <div className="container mx-auto grid place-items-center py-16">
-        <div className="glass glow max-w-md w-full rounded-2xl p-8">
+    <div className="relative h-screen w-full">
+      <div className="absolute inset-0 z-0">
+        <LiquidEther
+          colors={['#06b6d4', '#10b981', '#0891b2']}
+          mouseForce={20}
+          cursorSize={100}
+          isViscous={false}
+          viscous={30}
+          iterationsViscous={32}
+          iterationsPoisson={32}
+          resolution={0.5}
+          isBounce={false}
+          autoSpeed={0.5}
+          autoDemo={true}
+          autoIntensity={2.2}
+          takeoverDuration={0.25}
+          autoResumeDelay={3000}
+          autoRampDuration={0.6}
+        />
+      </div>
+      <div className="relative z-10 container mx-auto h-full flex items-center justify-center py-16 pointer-events-none">
+        <div className="glass glow max-w-md w-full rounded-2xl p-8 pointer-events-auto">
           <div className="text-center mb-8">
             <h1 className="text-3xl font-display text-gradient">
               Welcome to Cellexis

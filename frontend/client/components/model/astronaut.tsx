@@ -24,7 +24,7 @@ function Model({ url }: { url: string }) {
 function ModelViewer() {
   return (
     <div className='w-full h-screen'>
-      <Canvas className='' camera={{ position: [5, 0, 0], fov: 75}}>
+      <Canvas className='' style={{ background: 'transparent', width: '100%' }} camera={{ position: [5, 0, 0], fov: 75}}>
         <ambientLight intensity={0.5} />
         <pointLight position={[10, 10, 10]} />``
         <Suspense fallback={null}>

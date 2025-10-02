@@ -31,9 +31,9 @@ const SpaceBackground = () => {
             {/* Space background with gradient */}
             <div
                 className="fixed inset-0 w-full h-full"
-                style={{
-                    background: `linear-gradient(135deg, #000000 0%, #080d1a 50%, #000000 100%)`
-                }}
+                // style={{
+                //     background: `linear-gradient(135deg, #000000 0%, #080d1a 50%, #000000 100%)`
+                // }}
             />
             {/*             linear-gradient(135deg, #000000 0%, #0a1125 50%, #000000 100%)*/}
             {/* Distant stars layer (slowest parallax) */}

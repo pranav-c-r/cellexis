@@ -25,6 +25,7 @@
     "noFallthroughCasesInSwitch": false,
     "strictNullChecks": false,
 
+    "ignoreDeprecations": "6.0",// to ignore the deprecation error, in baseUrl just below
     /* Path mapping */
     "baseUrl": ".",
     "paths": {

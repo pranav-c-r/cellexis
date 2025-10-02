@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -9,7 +9,7 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
-import { ChevronLeft, ChevronRight, Search, User, LogOut } from "lucide-react";
+import { ChevronLeft, ChevronRight, Search, User, LogOut, Mic, MicOff } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import PaperComparison from "@/components/PaperComparison";
 import BookmarksNotes from "@/components/BookmarksNotes";
@@ -45,12 +45,322 @@ const mockPapers: Paper[] = [
   },
 ];
 
+// Voice command mappings
+const VOICE_COMMANDS = {
+  navigation: {
+    "search": "search",
+    "qa": "qa",
+    "question answer": "qa",
+    "ask": "qa",
+    "compare": "comparison",
+    "comparison": "comparison",
+    "bookmarks": "bookmarks",
+    "bookmark": "bookmarks",
+    "export": "export",
+    "feedback": "feedback",
+    "visualize": "visualization",
+    "visualization": "visualization",
+    "visual": "visualization"
+  },
+  actions: {
+    "logout": "logout",
+    "log out": "logout",
+    "sign out": "logout",
+    "profile": "profile",
+    "open left": "openLeft",
+    "close left": "closeLeft",
+    "open right": "openRight",
+    "close right": "closeRight",
+    "toggle left": "toggleLeft",
+    "toggle right": "toggleRight"
+  }
+};
+
 export default function Dashboard() {
   const [leftOpen, setLeftOpen] = useState(true);
   const [rightOpen, setRightOpen] = useState(true);
   const [activeTab, setActiveTab] = useState("comparison");
   const [selected, setSelected] = useState<Paper | null>(null);
+  const [isListening, setIsListening] = useState(false);
+  const [isVoiceActive, setIsVoiceActive] = useState(false);
+  const [transcript, setTranscript] = useState("");
+  const [isProcessing, setIsProcessing] = useState(false);
   const navigate = useNavigate();
+  
+  const recognitionRef = useRef<any>(null);
+  const silenceTimerRef = useRef<NodeJS.Timeout>();
+
+  // Initialize speech recognition
+  const initializeSpeechRecognition = () => {
+    if (typeof window === 'undefined') return;
+
+    try {
+      const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+      
+      if (!SpeechRecognition) {
+        console.warn('Speech Recognition API not supported in this browser');
+        return null;
+      }
+
+      const recognition = new SpeechRecognition();
+      recognition.continuous = true;
+      recognition.interimResults = true;
+      recognition.lang = 'en-US';
+      recognition.maxAlternatives = 1;
+
+      return recognition;
+    } catch (error) {
+      console.error('Error initializing speech recognition:', error);
+      return null;
+    }
+  };
+
+  // Process voice commands
+  const processVoiceCommand = (command: string) => {
+    if (isProcessing) return;
+    
+    setIsProcessing(true);
+    const cleanCommand = command.toLowerCase().trim();
+    
+    console.log('Processing command:', cleanCommand);
+
+    // Check for navigation commands
+    for (const [key, tab] of Object.entries(VOICE_COMMANDS.navigation)) {
+      if (cleanCommand.includes(key)) {
+        console.log('Navigating to:', tab);
+        setActiveTab(tab);
+        speak(`Navigating to ${key}`);
+        resetProcessing();
+        return;
+      }
+    }
+
+    // Check for action commands
+    for (const [key, action] of Object.entries(VOICE_COMMANDS.actions)) {
+      if (cleanCommand.includes(key)) {
+        console.log('Executing action:', action);
+        executeAction(action);
+        resetProcessing();
+        return;
+      }
+    }
+
+    // Special case for wake word
+    if (cleanCommand.includes("hey cellexis") && !isVoiceActive) {
+      console.log('Wake word detected');
+      activateVoiceAssistant();
+      resetProcessing();
+      return;
+    }
+
+    // Deactivation commands
+    if ((cleanCommand.includes("stop") || cleanCommand.includes("sleep") || cleanCommand.includes("deactivate")) && isVoiceActive) {
+      deactivateVoiceAssistant();
+      resetProcessing();
+      return;
+    }
+
+    // If no command matched but we're active, provide feedback
+    if (isVoiceActive && cleanCommand.length > 3) {
+      speak("Command not recognized. Try saying 'go to search' or 'logout'");
+    }
+
+    resetProcessing();
+  };
+
+  const executeAction = (action: string) => {
+    switch (action) {
+      case "logout":
+        speak("Logging out");
+        setTimeout(() => navigate("/"), 1000);
+        break;
+      case "profile":
+        speak("Profile feature coming soon");
+        break;
+      case "openLeft":
+      case "toggleLeft":
+        setLeftOpen(true);
+        speak("Left panel opened");
+        break;
+      case "closeLeft":
+        setLeftOpen(false);
+        speak("Left panel closed");
+        break;
+      case "openRight":
+      case "toggleRight":
+        setRightOpen(true);
+        speak("Right panel opened");
+        break;
+      case "closeRight":
+        setRightOpen(false);
+        speak("Right panel closed");
+        break;
+      default:
+        speak("Action not available");
+    }
+  };
+
+  const resetProcessing = () => {
+    setTimeout(() => {
+      setIsProcessing(false);
+      setTranscript("");
+    }, 1000);
+  };
+
+  const speak = (text: string) => {
+    if ('speechSynthesis' in window) {
+      // Cancel any ongoing speech
+      speechSynthesis.cancel();
+      
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.rate = 0.9;
+      utterance.pitch = 1;
+      utterance.volume = 0.8;
+      
+      utterance.onend = () => {
+        console.log('Finished speaking:', text);
+      };
+      
+      speechSynthesis.speak(utterance);
+    }
+  };
+
+  const activateVoiceAssistant = () => {
+    if (!recognitionRef.current) {
+      recognitionRef.current = initializeSpeechRecognition();
+      
+      if (!recognitionRef.current) {
+        alert('Speech recognition is not supported in your browser. Please use Chrome or Edge.');
+        return;
+      }
+
+      // Set up event handlers
+      recognitionRef.current.onresult = (event: any) => {
+        let finalTranscript = '';
+        
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          if (event.results[i].isFinal) {
+            finalTranscript += event.results[i][0].transcript;
+          }
+        }
+
+        if (finalTranscript) {
+          const cleanTranscript = finalTranscript.toLowerCase().trim();
+          setTranscript(cleanTranscript);
+          processVoiceCommand(cleanTranscript);
+        }
+      };
+
+      recognitionRef.current.onerror = (event: any) => {
+        console.error('Speech recognition error:', event.error);
+        
+        if (event.error === 'not-allowed') {
+          alert('Microphone access denied. Please allow microphone access to use voice commands.');
+          deactivateVoiceAssistant();
+        } else if (event.error === 'network') {
+          console.log('Network error in speech recognition');
+        }
+      };
+
+      recognitionRef.current.onend = () => {
+        console.log('Speech recognition ended');
+        if (isListening) {
+          // Restart recognition if we're still supposed to be listening
+          setTimeout(() => {
+            if (isListening && recognitionRef.current) {
+              try {
+                recognitionRef.current.start();
+              } catch (error) {
+                console.log('Error restarting recognition:', error);
+              }
+            }
+          }, 100);
+        }
+      };
+    }
+
+    setIsVoiceActive(true);
+    setIsListening(true);
+    
+    try {
+      recognitionRef.current.start();
+      speak("Voice assistant activated. How can I help you?");
+    } catch (error) {
+      console.error('Error starting speech recognition:', error);
+      // If start fails, try reinitializing
+      setTimeout(() => {
+        recognitionRef.current = null;
+        activateVoiceAssistant();
+      }, 1000);
+    }
+  };
+
+  const deactivateVoiceAssistant = () => {
+    setIsListening(false);
+    setIsVoiceActive(false);
+    setTranscript("");
+    
+    if (recognitionRef.current) {
+      try {
+        recognitionRef.current.stop();
+      } catch (error) {
+        console.error('Error stopping recognition:', error);
+      }
+    }
+    
+    speak("Voice assistant deactivated");
+  };
+
+  const toggleVoiceAssistant = () => {
+    if (isVoiceActive) {
+      deactivateVoiceAssistant();
+    } else {
+      activateVoiceAssistant();
+    }
+  };
+
+  // Keyboard shortcut handler
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if ((event.ctrlKey || event.metaKey) && event.code === 'Space') {
+        event.preventDefault();
+        event.stopPropagation();
+        
+        if (isVoiceActive) {
+          deactivateVoiceAssistant();
+        } else {
+          activateVoiceAssistant();
+        }
+      }
+      
+      if (event.code === 'Escape' && isVoiceActive) {
+        event.preventDefault();
+        deactivateVoiceAssistant();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isVoiceActive]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (recognitionRef.current) {
+        try {
+          recognitionRef.current.stop();
+        } catch (error) {
+          console.error('Error cleaning up recognition:', error);
+        }
+      }
+      if (silenceTimerRef.current) {
+        clearTimeout(silenceTimerRef.current);
+      }
+      speechSynthesis.cancel();
+    };
+  }, []);
 
   return (
     <div className="bg-space min-h-screen">
@@ -298,6 +608,77 @@ export default function Dashboard() {
         {activeTab === "export" && <ExportShare />}
         {activeTab === "feedback" && <UserFeedback />}
         {activeTab === "visualization" && <VisualizationEnhancements />}
+      </div>
+
+      {/* Voice Assistant Floating Button */}
+      <div className="fixed bottom-6 right-6 z-50">
+        <div className="relative">
+          {/* Voice Status Indicator */}
+          {isVoiceActive && (
+            <div className="absolute -top-2 -right-2">
+              <div className="relative">
+                <div className="animate-ping absolute inline-flex h-4 w-4 rounded-full bg-green-400 opacity-75"></div>
+                <div className="relative inline-flex rounded-full h-4 w-4 bg-green-500"></div>
+              </div>
+            </div>
+          )}
+          
+          {/* Voice Assistant Button */}
+          <Button
+            onClick={toggleVoiceAssistant}
+            className={`rounded-full w-14 h-14 shadow-lg transition-all duration-300 ${
+              isVoiceActive 
+                ? 'bg-gradient-to-r from-green-500 to-emerald-600 text-white ring-2 ring-green-300' 
+                : 'bg-gradient-to-r from-primary via-accent to-secondary text-black hover:scale-105'
+            }`}
+            size="icon"
+          >
+            {isVoiceActive ? (
+              <Mic className="h-6 w-6 animate-pulse" />
+            ) : (
+              <MicOff className="h-6 w-6" />
+            )}
+          </Button>
+        </div>
+
+        {/* Voice Command Feedback */}
+        {isVoiceActive && (
+          <div className="absolute bottom-16 right-0 mb-2 w-80 glass rounded-lg p-4 shadow-xl border border-green-200/20">
+            <div className="flex items-center justify-between mb-2">
+              <h4 className="font-semibold text-sm text-green-600">Voice Assistant Active</h4>
+              <div className="flex items-center gap-2">
+                <div className="flex space-x-1">
+                  <div className="w-1 h-3 bg-green-500 rounded-full animate-pulse"></div>
+                  <div className="w-1 h-3 bg-green-500 rounded-full animate-pulse" style={{animationDelay: '0.2s'}}></div>
+                  <div className="w-1 h-3 bg-green-500 rounded-full animate-pulse" style={{animationDelay: '0.4s'}}></div>
+                </div>
+                <span className="text-xs text-green-600">Listening</span>
+              </div>
+            </div>
+            
+            {transcript && (
+              <div className="mt-2 p-2 bg-background/50 rounded text-sm border border-green-200/30">
+                <div className="text-xs text-foreground/60 mb-1">Heard:</div>
+                <div className="font-medium text-green-700">{transcript}</div>
+              </div>
+            )}
+            
+            <div className="mt-3 text-xs text-foreground/70">
+              <div className="font-medium mb-1">Try saying:</div>
+              <ul className="space-y-1">
+                <li>"Go to search" / "Open bookmarks"</li>
+                <li>"Toggle left panel" / "Close right panel"</li>
+                <li>"Logout" / "Profile"</li>
+                <li>"Stop listening" to deactivate</li>
+              </ul>
+            </div>
+            
+            <div className="mt-3 text-xs text-foreground/50 flex gap-4">
+              <span>Press Ctrl+Space to toggle</span>
+              <span>Press ESC to deactivate</span>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Paper Detail Modal */}

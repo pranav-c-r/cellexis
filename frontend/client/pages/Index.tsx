@@ -25,6 +25,7 @@ import BlackPlanet from "@/components/model/black-planet"
 import BluePlanet from "@/components/model/blue-planet"
 import WhitePlanet from "@/components/model/white-planet"
 import Stars from "@/components/ui/stars"
+import InstallButton from "@/components/ui/InstallButton"
 
 const ASTRONAUT_URL =
   "https://cdn.builder.io/api/v1/image/assets%2F2c7b56b85f304d7c977ff7daf41b0b6b%2Fbb727473002c4b279783860445cd9b6f?format=webp&width=800";
@@ -62,6 +63,7 @@ export default function Index() {
                 >
                   Get Started
                 </Button>
+                <InstallButton />
               </Link>
             </div>
           </div>

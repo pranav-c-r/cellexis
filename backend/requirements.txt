@@ -11,3 +11,5 @@ pandas
 PyPDF2
 nltk
 ollama
+python-dotenv
+pydantic

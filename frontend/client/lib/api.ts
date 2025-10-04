@@ -1,5 +1,5 @@
 // API service for backend integration
-const API_BASE_URL = 'http://localhost:8000';
+const API_BASE_URL = 'http://localhost:8002';
 
 export interface RAGResponse {
   query: string;
@@ -55,16 +55,15 @@ class ApiService {
   // RAG Search - Main functionality
   async searchRAG(query: string, topK: number = 5): Promise<RAGResponse> {
     try {
-      console.log('🔍 Making RAG search request:', { query, topK, url: `${this.baseUrl}/search-rag` });
+      console.log('🔍 Making RAG search request:', { query, topK, url: `${this.baseUrl}/api/search` });
       
-      const response = await fetch(`${this.baseUrl}/search-rag`, {
+      const response = await fetch(`${this.baseUrl}/api/search`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
           query,
-          top_k: topK,
         }),
       });
 

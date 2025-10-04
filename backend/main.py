@@ -108,25 +108,31 @@ def search_papers(query: str):
 async def search_endpoint(request: SearchRequest):
     """Search papers endpoint"""
     try:
-        print(f"🔍 Searching for: {request.query}")
         results = search_papers(request.query)
-        print(f"✅ Found {len(results)} results")
-        return {"results": results, "query": request.query, "total": len(results)}
-    except Exception as e:
-        print(f"❌ Search endpoint error: {e}")
-        # Return error information instead of throwing HTTP exception
+        # Convert to RAG response format expected by frontend
         return {
-            "results": [{
-                "id": "api_error",
-                "title": f"API Error for '{request.query}'",
-                "summary": f"API endpoint failed: {str(e)}",
-                "year": 2023,
-                "relationship": "API -> ERROR -> Backend"
-            }],
-            "error": str(e),
             "query": request.query,
-            "total": 1
+            "answer": f"Found {len(results)} results for '{request.query}'",
+            "citations": [
+                {
+                    "paper_id": result["id"],
+                    "page_num": 1,
+                    "score": 0.85
+                } for result in results
+            ],
+            "chunks_used": len(results),
+            "retrieved_chunks": [
+                {
+                    "score": 0.85,
+                    "paper_id": result["id"],
+                    "chunk_id": f"chunk_{result['id']}",
+                    "text": result["summary"],
+                    "page_num": 1
+                } for result in results
+            ]
         }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/health")
 async def health_check():

@@ -532,7 +532,7 @@ export default function Dashboard() {
     <div className="bg-space min-h-screen">
       {/* Navigation Bar */}
       <div className="border-b border-border/40 bg-background/60 backdrop-blur">
-        <div className="container mx-auto px-4 flex items-center justify-between py-2 gap-2 md:gap-4">
+        <div className=" mx-auto px-4 flex items-center justify-between py-2 md:gap-4">
           {/* Logo */}
           <Link to="/" className="flex items-center gap-2 group flex-shrink-0">
             <img
@@ -544,7 +544,7 @@ export default function Dashboard() {
           </Link>
 
           {/* Navigation Options */}
-          <div className="flex items-center gap-1 md:gap-2 flex-1 justify-center">
+          <div className="flex items-center md:gap-2 flex-wrap justify-center">
             <Button
               variant={activeTab === "search" ? "default" : "ghost"}
               size="sm"

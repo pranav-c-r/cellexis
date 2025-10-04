@@ -1,12 +1,21 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useNavigate } from "react-router-dom";
 import { useState } from "react";
+import { auth, googleProvider } from '@/lib/firebase';
+import { signInWithPopup } from 'firebase/auth';
 import LiquidEther from "@/components/ui/liquid-ether";
 
 export default function Login() {
   const [username, setUsername] = useState("");
-  const navigate = useNavigate();
+  const signInWithGoogle = async () => {
+    try {
+      const result = await signInWithPopup(auth, googleProvider);
+      const user = result.user;
+      console.log("User signed in:", user);
+    } catch (error) {
+      console.error("Error signing in:", error);
+    }
+  }
 
   return (
     <div className="relative h-screen w-full">
@@ -47,7 +56,7 @@ export default function Login() {
             />
             <Button
               className="w-full h-11 rounded-[10px] bg-gradient-to-r from-primary via-accent to-secondary text-black font-semibold"
-              onClick={() => navigate("/dashboard")}
+              onClick={signInWithGoogle}
             >
               Sign in with Google
             </Button>

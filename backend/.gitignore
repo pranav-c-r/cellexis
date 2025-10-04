@@ -6,3 +6,5 @@ ingestion/venv
 backend/data/papers/
 data/papers
 data/papers/
+backend/data/chunks
+data/chunks/

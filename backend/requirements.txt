@@ -2,3 +2,12 @@ fastapi
 uvicorn
 neo4j
 google-generativeai
+wordninja
+sentence-transformers
+faiss-cpu
+pdfplumber
+google-genai
+pandas
+PyPDF2
+nltk
+ollama

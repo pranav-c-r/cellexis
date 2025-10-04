@@ -10,13 +10,21 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
-import { ChevronLeft, ChevronRight, Search, User, LogOut, Mic, MicOff } from "lucide-react";
+import { ChevronLeft, ChevronRight, Search, User, LogOut, Mic, MicOff, Loader2 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import PaperComparison from "@/components/PaperComparison";
 import BookmarksNotes from "@/components/BookmarksNotes";
 import ExportShare from "@/components/ExportShare";
 import UserFeedback from "@/components/UserFeedback";
 import VisualizationEnhancements from "@/components/VisualizationEnhancements";
+import { apiService, RAGResponse, GraphResponse } from "@/lib/api";
+
+// Import Cytoscape for graph visualization
+declare global {
+  interface Window {
+    cytoscape: any;
+  }
+}
 
 interface Paper {
   id: string;
@@ -86,10 +94,141 @@ export default function Dashboard() {
   const [isVoiceActive, setIsVoiceActive] = useState(false);
   const [transcript, setTranscript] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
+  
+  // Search functionality state
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<RAGResponse | null>(null);
+  const [isSearching, setIsSearching] = useState(false);
+  const [graphData, setGraphData] = useState<GraphResponse | null>(null);
+  const [isLoadingGraph, setIsLoadingGraph] = useState(false);
+  
   const navigate = useNavigate();
   const {user,signOut} = useAuth();
   const recognitionRef = useRef<any>(null);
   const silenceTimerRef = useRef<NodeJS.Timeout>();
+  const graphRef = useRef<HTMLDivElement>(null);
+  const cytoscapeRef = useRef<any>(null);
+
+  // Search functions
+  const handleSearch = async () => {
+    if (!searchQuery.trim()) return;
+    
+    console.log('🚀 Starting search with query:', searchQuery);
+    setIsSearching(true);
+    try {
+      console.log('📞 Calling apiService.searchRAG...');
+      const results = await apiService.searchRAG(searchQuery, 5);
+      console.log('📊 Search results received:', results);
+      setSearchResults(results);
+      
+      // Load graph data after search
+      console.log('📊 Loading graph data...');
+      await loadGraphData();
+    } catch (error) {
+      console.error('❌ Search error:', error);
+      setSearchResults({
+        query: searchQuery,
+        answer: "Error performing search. Please try again.",
+        citations: [],
+        chunks_used: 0
+      });
+    } finally {
+      console.log('✅ Search completed, setting isSearching to false');
+      setIsSearching(false);
+    }
+  };
+
+  const loadGraphData = async () => {
+    console.log('📊 Starting to load graph data...');
+    setIsLoadingGraph(true);
+    try {
+      const graph = await apiService.getGraph();
+      console.log('📊 Graph data received:', graph);
+      setGraphData(graph);
+      
+      // Render the graph after data is loaded
+      if (graph && graph.nodes.length > 0) {
+        setTimeout(() => renderGraph(graph), 100);
+      }
+    } catch (error) {
+      console.error('❌ Graph loading error:', error);
+    } finally {
+      console.log('📊 Graph loading completed');
+      setIsLoadingGraph(false);
+    }
+  };
+
+  const renderGraph = (data: GraphResponse) => {
+    if (!graphRef.current || !window.cytoscape) {
+      console.log('📊 Graph container or Cytoscape not available');
+      return;
+    }
+
+    // Clear previous graph
+    if (cytoscapeRef.current) {
+      cytoscapeRef.current.destroy();
+    }
+
+    try {
+      cytoscapeRef.current = window.cytoscape({
+        container: graphRef.current,
+        elements: [
+          ...data.nodes.map(node => ({
+            data: {
+              id: node.data.id,
+              label: node.data.label,
+              type: node.data.type
+            }
+          })),
+          ...data.edges.map(edge => ({
+            data: {
+              id: edge.data.id,
+              source: edge.data.source,
+              target: edge.data.target,
+              label: edge.data.label
+            }
+          }))
+        ],
+        style: [
+          {
+            selector: 'node',
+            style: {
+              'background-color': '#3b82f6',
+              'label': 'data(label)',
+              'text-valign': 'center',
+              'text-halign': 'center',
+              'font-size': '8px',
+              'width': '20px',
+              'height': '20px',
+              'border-width': 1,
+              'border-color': '#1e40af'
+            }
+          },
+          {
+            selector: 'edge',
+            style: {
+              'width': 1,
+              'line-color': '#6b7280',
+              'target-arrow-color': '#6b7280',
+              'target-arrow-shape': 'triangle',
+              'curve-style': 'bezier',
+              'label': 'data(label)',
+              'font-size': '6px'
+            }
+          }
+        ],
+        layout: {
+          name: 'cose',
+          animate: true,
+          animationDuration: 1000
+        }
+      });
+
+      console.log('📊 Graph rendered successfully');
+    } catch (error) {
+      console.error('❌ Error rendering graph:', error);
+    }
+  };
 
   // Initialize speech recognition
   const initializeSpeechRecognition = () => {
@@ -346,6 +485,32 @@ export default function Dashboard() {
     };
   }, [isVoiceActive]);
 
+  // Load Cytoscape library
+  useEffect(() => {
+    const loadCytoscape = () => {
+      if (window.cytoscape) {
+        console.log('📊 Cytoscape already loaded');
+        return;
+      }
+
+      const script = document.createElement('script');
+      script.src = 'https://unpkg.com/cytoscape@3.26.0/dist/cytoscape.min.js';
+      script.onload = () => {
+        console.log('📊 Cytoscape loaded successfully');
+        // Re-render graph if data is available
+        if (graphData && graphData.nodes.length > 0) {
+          setTimeout(() => renderGraph(graphData), 100);
+        }
+      };
+      script.onerror = () => {
+        console.error('❌ Failed to load Cytoscape');
+      };
+      document.head.appendChild(script);
+    };
+
+    loadCytoscape();
+  }, [graphData]);
+
   // Cleanup on unmount
   useEffect(() => {
     return () => {
@@ -516,17 +681,71 @@ export default function Dashboard() {
               <div className="glass rounded-xl p-4">
                 <h3 className="font-semibold mb-2">Search Papers</h3>
                 <div className="flex gap-2">
-                  <Input placeholder="Search across NASA bioscience publications..." />
-                  <Button className="bg-gradient-to-r from-primary via-accent to-secondary text-black">
-                    Search
+                  <Input 
+                    placeholder="Search across NASA bioscience publications..." 
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
+                  />
+                  <Button 
+                    onClick={handleSearch}
+                    disabled={isSearching || !searchQuery.trim()}
+                    className="bg-gradient-to-r from-primary via-accent to-secondary text-black"
+                  >
+                    {isSearching ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
                   </Button>
                 </div>
               </div>
+              
+              {/* Search Results */}
               <div className="glass rounded-xl p-4">
-                <h3 className="font-semibold">Search Results</h3>
-                <p className="mt-2 text-sm text-foreground/80">
-                  Use the filters to find relevant papers from the NASA database.
-                </p>
+                <h3 className="font-semibold mb-4">Search Results</h3>
+                {isSearching ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="h-6 w-6 animate-spin mr-2" />
+                    <span>Searching NASA publications...</span>
+                  </div>
+                ) : searchResults ? (
+                  <div className="space-y-4">
+                    <div className="p-4 bg-muted/20 rounded-lg">
+                      <h4 className="font-medium mb-2">Answer:</h4>
+                      <p className="text-sm text-foreground/80 whitespace-pre-wrap">
+                        {searchResults.answer}
+                      </p>
+                    </div>
+                    
+                    {console.log('📋 Citations data:', searchResults.citations)}
+                    {searchResults.citations && searchResults.citations.length > 0 ? (
+                      <div>
+                        <h4 className="font-medium mb-2">Citations:</h4>
+                        <div className="space-y-2">
+                          {searchResults.citations.map((citation, index) => (
+                            <div key={index} className="text-xs text-foreground/70 bg-background/50 p-2 rounded border-l-2 border-blue-500">
+                              <div className="font-medium text-blue-600">
+                                Paper ID: {citation.paper_id}
+                              </div>
+                              <div className="text-foreground/60">
+                                Page {citation.page_num} • Relevance: {(citation.score * 100).toFixed(1)}%
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="text-xs text-foreground/60">
+                        No citations available
+                      </div>
+                    )}
+                    
+                    <div className="text-xs text-foreground/60">
+                      Based on {searchResults.chunks_used} relevant chunks from NASA publications
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-sm text-foreground/80">
+                    Enter a search query to find relevant information from NASA bioscience publications.
+                  </p>
+                )}
               </div>
             </main>
 
@@ -534,7 +753,7 @@ export default function Dashboard() {
             {rightOpen ? (
               <aside className="col-span-12 lg:col-span-3 glass rounded-xl p-4 self-start">
                 <div className="flex items-center justify-between mb-3">
-                  <h3 className="font-semibold">Graph Explorer</h3>
+                  <h3 className="font-semibold">Knowledge Graph</h3>
                   <Button
                     variant="ghost"
                     size="icon"
@@ -543,8 +762,31 @@ export default function Dashboard() {
                     <ChevronRight />
                   </Button>
                 </div>
-                <div className="aspect-[4/5] w-full rounded-lg border border-border/50 grid place-items-center text-sm text-foreground/60">
-                  Cytoscape.js preview here
+                <div className="aspect-[4/5] w-full rounded-lg border border-border/50 relative">
+                  {isLoadingGraph ? (
+                    <div className="absolute inset-0 flex flex-col items-center justify-center text-sm text-foreground/60">
+                      <Loader2 className="h-6 w-6 animate-spin mb-2" />
+                      <span>Loading graph...</span>
+                    </div>
+                  ) : graphData ? (
+                    <>
+                      <div className="absolute top-2 left-2 text-xs text-foreground/60 z-10">
+                        Nodes: {graphData.nodes.length} | Edges: {graphData.edges.length}
+                      </div>
+                      <div 
+                        ref={graphRef} 
+                        className="w-full h-full"
+                        style={{ minHeight: '300px' }}
+                      />
+                    </>
+                  ) : (
+                    <div className="absolute inset-0 flex flex-col items-center justify-center text-sm text-foreground/60">
+                      <div className="text-xs mb-2">Cytoscape.js visualization</div>
+                      <div className="text-xs text-foreground/50">
+                        Perform a search to load graph data
+                      </div>
+                    </div>
+                  )}
                 </div>
                 <p className="mt-3 text-xs text-foreground/60">
                   Click nodes to view related papers.
@@ -570,35 +812,62 @@ export default function Dashboard() {
               <div className="glass rounded-xl p-4">
                 <h3 className="font-semibold mb-2">Ask a question</h3>
                 <div className="flex gap-2">
-                  <Input placeholder="e.g., How does microgravity affect immune response?" />
-                  <Button className="bg-gradient-to-r from-primary via-accent to-secondary text-black">
-                    Ask
+                  <Input 
+                    placeholder="e.g., How does microgravity affect immune response?" 
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
+                  />
+                  <Button 
+                    onClick={handleSearch}
+                    disabled={isSearching || !searchQuery.trim()}
+                    className="bg-gradient-to-r from-primary via-accent to-secondary text-black"
+                  >
+                    {isSearching ? <Loader2 className="h-4 w-4 animate-spin" /> : "Ask"}
                   </Button>
                 </div>
               </div>
               <div className="glass rounded-xl p-4">
                 <h3 className="font-semibold">Answer</h3>
-                <p className="mt-2 text-sm text-foreground/80">
-                  Gemini response will appear here.
-                </p>
-                <div className="mt-4 text-xs text-foreground/60">
-                  Citations: NASA-001 p.2, NASA-214 p.5
-                </div>
-                <details className="mt-3">
-                  <summary className="cursor-pointer text-sm text-foreground/80">
-                    Retrieved snippets
-                  </summary>
-                  <ul className="mt-2 list-disc pl-5 text-sm text-foreground/70 space-y-1">
-                    <li>
-                      "Microgravity reduced T-cell activation in missions STS-XXX
-                      ..."
-                    </li>
-                    <li>
-                      "Mitochondrial fragmentation increased under flight conditions
-                      ..."
-                    </li>
-                  </ul>
-                </details>
+                {isSearching ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="h-6 w-6 animate-spin mr-2" />
+                    <span>Searching NASA publications...</span>
+                  </div>
+                ) : searchResults ? (
+                  <div className="space-y-4">
+                    <div className="p-4 bg-muted/20 rounded-lg">
+                      <p className="text-sm text-foreground/80 whitespace-pre-wrap">
+                        {searchResults.answer}
+                      </p>
+                    </div>
+                    
+                    {searchResults.citations.length > 0 && (
+                      <div className="mt-4 text-xs text-foreground/60">
+                        Citations: {searchResults.citations.map(c => `${c.paper_id} p.${c.page_num}`).join(', ')}
+                      </div>
+                    )}
+                    
+                    {searchResults.retrieved_chunks && (
+                      <details className="mt-3">
+                        <summary className="cursor-pointer text-sm text-foreground/80">
+                          Retrieved snippets ({searchResults.chunks_used})
+                        </summary>
+                        <ul className="mt-2 list-disc pl-5 text-sm text-foreground/70 space-y-1">
+                          {searchResults.retrieved_chunks.slice(0, 3).map((chunk, index) => (
+                            <li key={index}>
+                              "{chunk.text.substring(0, 100)}..."
+                            </li>
+                          ))}
+                        </ul>
+                      </details>
+                    )}
+                  </div>
+                ) : (
+                  <p className="mt-2 text-sm text-foreground/80">
+                    Ask a question about NASA bioscience research to get AI-powered answers.
+                  </p>
+                )}
               </div>
             </main>
           </div>

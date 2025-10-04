@@ -1,6 +1,7 @@
 import { Canvas, useFrame } from '@react-three/fiber'
 import { OrbitControls, useGLTF } from '@react-three/drei'
 import { Suspense, useRef } from 'react'
+import Loading from './../ui/Loading'
 import { Group } from 'three'
 
 function Model({ url }: { url: string }) {
@@ -9,7 +10,7 @@ function Model({ url }: { url: string }) {
   
   useFrame((state, delta) => {
     if (modelRef.current) {
-      modelRef.current.rotation.y += delta * 0.1
+      modelRef.current.rotation.y += delta * 0.5
     }
   })
   
@@ -25,8 +26,8 @@ function ModelViewer() {
     <div className='w-full'>
       <Canvas className='' style={{ background: 'transparent'}} camera={{ position: [5, 1, 0], fov: 75}}>
         <ambientLight intensity={0.5} />
-        <pointLight position={[10, 10, 10]} />``
-        <Suspense fallback={null}>
+        <pointLight position={[10, 10, 10]} />
+        <Suspense fallback={<Loading />}>
           <Model url="/models/purple_ring.glb" />
         </Suspense>
         <OrbitControls enableZoom={false} />

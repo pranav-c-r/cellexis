@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import {useAuth} from "@/contexts/AuthContext"
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -86,7 +87,7 @@ export default function Dashboard() {
   const [transcript, setTranscript] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
   const navigate = useNavigate();
-  
+  const {user,signOut} = useAuth();
   const recognitionRef = useRef<any>(null);
   const silenceTimerRef = useRef<NodeJS.Timeout>();
 
@@ -449,7 +450,7 @@ export default function Dashboard() {
             <Button
               variant="ghost"
               className="text-foreground/70 hover:text-foreground whitespace-nowrap p-1 md:p-2"
-              onClick={() => navigate("/")}
+              onClick={signOut}
             >
               <LogOut className="h-3 w-3 md:mr-2 md:h-4 md:w-4" />
               <span className="hidden md:inline">Logout</span>

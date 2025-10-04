@@ -1,6 +1,7 @@
 import { Canvas, useFrame } from '@react-three/fiber'
 import { OrbitControls, useGLTF } from '@react-three/drei'
 import { Suspense, useRef } from 'react'
+import Loading from './../ui/Loading'
 import { Group } from 'three'
 
 function Model({ url }: { url: string }) {
@@ -27,7 +28,7 @@ function ModelViewer() {
       <Canvas className='' style={{ background: 'transparent', width: '100%' }} camera={{ position: [5, 0, 0], fov: 75}}>
         <ambientLight intensity={0.5} />
         <pointLight position={[10, 10, 10]} />``
-        <Suspense fallback={null}>
+        <Suspense fallback={<Loading/>}>
           <Model url="/models/astronaut.glb" />
         </Suspense>
         {/* <OrbitControls enableZoom={false} /> */}

@@ -93,16 +93,21 @@ class ApiService {
         ? `${this.baseUrl}/graph?filter_type=${encodeURIComponent(filterType)}`
         : `${this.baseUrl}/graph`;
       
+      console.log('📊 Fetching graph from:', url);
+      
       const response = await fetch(url);
+      
+      console.log('📊 Graph response status:', response.status);
       
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
       const data = await response.json();
+      console.log('📊 Graph data received:', data);
       return data;
     } catch (error) {
-      console.error('Error fetching graph:', error);
+      console.error('❌ Error fetching graph:', error);
       throw error;
     }
   }

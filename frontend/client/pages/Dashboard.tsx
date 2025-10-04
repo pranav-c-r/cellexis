@@ -19,6 +19,13 @@ import UserFeedback from "@/components/UserFeedback";
 import VisualizationEnhancements from "@/components/VisualizationEnhancements";
 import { apiService, RAGResponse, GraphResponse } from "@/lib/api";
 
+// Import Cytoscape for graph visualization
+declare global {
+  interface Window {
+    cytoscape: any;
+  }
+}
+
 interface Paper {
   id: string;
   title: string;
@@ -99,6 +106,8 @@ export default function Dashboard() {
   const {user,signOut} = useAuth();
   const recognitionRef = useRef<any>(null);
   const silenceTimerRef = useRef<NodeJS.Timeout>();
+  const graphRef = useRef<HTMLDivElement>(null);
+  const cytoscapeRef = useRef<any>(null);
 
   // Search functions
   const handleSearch = async () => {
@@ -130,14 +139,94 @@ export default function Dashboard() {
   };
 
   const loadGraphData = async () => {
+    console.log('📊 Starting to load graph data...');
     setIsLoadingGraph(true);
     try {
       const graph = await apiService.getGraph();
+      console.log('📊 Graph data received:', graph);
       setGraphData(graph);
+      
+      // Render the graph after data is loaded
+      if (graph && graph.nodes.length > 0) {
+        setTimeout(() => renderGraph(graph), 100);
+      }
     } catch (error) {
-      console.error('Graph loading error:', error);
+      console.error('❌ Graph loading error:', error);
     } finally {
+      console.log('📊 Graph loading completed');
       setIsLoadingGraph(false);
+    }
+  };
+
+  const renderGraph = (data: GraphResponse) => {
+    if (!graphRef.current || !window.cytoscape) {
+      console.log('📊 Graph container or Cytoscape not available');
+      return;
+    }
+
+    // Clear previous graph
+    if (cytoscapeRef.current) {
+      cytoscapeRef.current.destroy();
+    }
+
+    try {
+      cytoscapeRef.current = window.cytoscape({
+        container: graphRef.current,
+        elements: [
+          ...data.nodes.map(node => ({
+            data: {
+              id: node.data.id,
+              label: node.data.label,
+              type: node.data.type
+            }
+          })),
+          ...data.edges.map(edge => ({
+            data: {
+              id: edge.data.id,
+              source: edge.data.source,
+              target: edge.data.target,
+              label: edge.data.label
+            }
+          }))
+        ],
+        style: [
+          {
+            selector: 'node',
+            style: {
+              'background-color': '#3b82f6',
+              'label': 'data(label)',
+              'text-valign': 'center',
+              'text-halign': 'center',
+              'font-size': '8px',
+              'width': '20px',
+              'height': '20px',
+              'border-width': 1,
+              'border-color': '#1e40af'
+            }
+          },
+          {
+            selector: 'edge',
+            style: {
+              'width': 1,
+              'line-color': '#6b7280',
+              'target-arrow-color': '#6b7280',
+              'target-arrow-shape': 'triangle',
+              'curve-style': 'bezier',
+              'label': 'data(label)',
+              'font-size': '6px'
+            }
+          }
+        ],
+        layout: {
+          name: 'cose',
+          animate: true,
+          animationDuration: 1000
+        }
+      });
+
+      console.log('📊 Graph rendered successfully');
+    } catch (error) {
+      console.error('❌ Error rendering graph:', error);
     }
   };
 
@@ -396,6 +485,32 @@ export default function Dashboard() {
     };
   }, [isVoiceActive]);
 
+  // Load Cytoscape library
+  useEffect(() => {
+    const loadCytoscape = () => {
+      if (window.cytoscape) {
+        console.log('📊 Cytoscape already loaded');
+        return;
+      }
+
+      const script = document.createElement('script');
+      script.src = 'https://unpkg.com/cytoscape@3.26.0/dist/cytoscape.min.js';
+      script.onload = () => {
+        console.log('📊 Cytoscape loaded successfully');
+        // Re-render graph if data is available
+        if (graphData && graphData.nodes.length > 0) {
+          setTimeout(() => renderGraph(graphData), 100);
+        }
+      };
+      script.onerror = () => {
+        console.error('❌ Failed to load Cytoscape');
+      };
+      document.head.appendChild(script);
+    };
+
+    loadCytoscape();
+  }, [graphData]);
+
   // Cleanup on unmount
   useEffect(() => {
     return () => {
@@ -599,16 +714,26 @@ export default function Dashboard() {
                       </p>
                     </div>
                     
-                    {searchResults.citations.length > 0 && (
+                    {console.log('📋 Citations data:', searchResults.citations)}
+                    {searchResults.citations && searchResults.citations.length > 0 ? (
                       <div>
                         <h4 className="font-medium mb-2">Citations:</h4>
                         <div className="space-y-2">
                           {searchResults.citations.map((citation, index) => (
-                            <div key={index} className="text-xs text-foreground/70 bg-background/50 p-2 rounded">
-                              {citation.paper_id} (Page {citation.page_num}) - Score: {citation.score.toFixed(3)}
+                            <div key={index} className="text-xs text-foreground/70 bg-background/50 p-2 rounded border-l-2 border-blue-500">
+                              <div className="font-medium text-blue-600">
+                                Paper ID: {citation.paper_id}
+                              </div>
+                              <div className="text-foreground/60">
+                                Page {citation.page_num} • Relevance: {(citation.score * 100).toFixed(1)}%
+                              </div>
                             </div>
                           ))}
                         </div>
+                      </div>
+                    ) : (
+                      <div className="text-xs text-foreground/60">
+                        No citations available
                       </div>
                     )}
                     
@@ -637,32 +762,25 @@ export default function Dashboard() {
                     <ChevronRight />
                   </Button>
                 </div>
-                <div className="aspect-[4/5] w-full rounded-lg border border-border/50 grid place-items-center text-sm text-foreground/60">
+                <div className="aspect-[4/5] w-full rounded-lg border border-border/50 relative">
                   {isLoadingGraph ? (
-                    <div className="flex flex-col items-center">
+                    <div className="absolute inset-0 flex flex-col items-center justify-center text-sm text-foreground/60">
                       <Loader2 className="h-6 w-6 animate-spin mb-2" />
                       <span>Loading graph...</span>
                     </div>
                   ) : graphData ? (
-                    <div className="w-full h-full p-2">
-                      <div className="text-xs mb-2">
+                    <>
+                      <div className="absolute top-2 left-2 text-xs text-foreground/60 z-10">
                         Nodes: {graphData.nodes.length} | Edges: {graphData.edges.length}
                       </div>
-                      <div className="space-y-1 max-h-48 overflow-y-auto">
-                        {graphData.nodes.slice(0, 10).map((node, index) => (
-                          <div key={index} className="text-xs bg-background/50 p-1 rounded">
-                            {node.data.label} ({node.data.type})
-                          </div>
-                        ))}
-                        {graphData.nodes.length > 10 && (
-                          <div className="text-xs text-foreground/50">
-                            +{graphData.nodes.length - 10} more nodes
-                          </div>
-                        )}
-                      </div>
-                    </div>
+                      <div 
+                        ref={graphRef} 
+                        className="w-full h-full"
+                        style={{ minHeight: '300px' }}
+                      />
+                    </>
                   ) : (
-                    <div className="text-center">
+                    <div className="absolute inset-0 flex flex-col items-center justify-center text-sm text-foreground/60">
                       <div className="text-xs mb-2">Cytoscape.js visualization</div>
                       <div className="text-xs text-foreground/50">
                         Perform a search to load graph data

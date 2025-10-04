@@ -10,7 +10,7 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
-import { ChevronLeft, ChevronRight, Search, User, LogOut, Mic, MicOff, Loader2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Search, User, LogOut, Mic, MicOff, Loader2, Maximize2, Minimize2, X } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import PaperComparison from "@/components/PaperComparison";
 import BookmarksNotes from "@/components/BookmarksNotes";
@@ -101,13 +101,16 @@ export default function Dashboard() {
   const [isSearching, setIsSearching] = useState(false);
   const [graphData, setGraphData] = useState<GraphResponse | null>(null);
   const [isLoadingGraph, setIsLoadingGraph] = useState(false);
+  const [isGraphFullscreen, setIsGraphFullscreen] = useState(false);
   
   const navigate = useNavigate();
   const {user,signOut} = useAuth();
   const recognitionRef = useRef<any>(null);
   const silenceTimerRef = useRef<NodeJS.Timeout>();
   const graphRef = useRef<HTMLDivElement>(null);
+  const fullscreenGraphRef = useRef<HTMLDivElement>(null);
   const cytoscapeRef = useRef<any>(null);
+  const fullscreenCytoscapeRef = useRef<any>(null);
 
   // Search functions
   const handleSearch = async () => {
@@ -158,20 +161,37 @@ export default function Dashboard() {
     }
   };
 
-  const renderGraph = (data: GraphResponse) => {
-    if (!graphRef.current || !window.cytoscape) {
+  const enterFullscreen = () => {
+    setIsGraphFullscreen(true);
+    if (graphData && graphData.nodes.length > 0) {
+      setTimeout(() => renderGraph(graphData, true), 100);
+    }
+  };
+
+  const exitFullscreen = () => {
+    setIsGraphFullscreen(false);
+    if (graphData && graphData.nodes.length > 0) {
+      setTimeout(() => renderGraph(graphData, false), 100);
+    }
+  };
+
+  const renderGraph = (data: GraphResponse, isFullscreen = false) => {
+    const container = isFullscreen ? fullscreenGraphRef.current : graphRef.current;
+    const cytoscapeInstance = isFullscreen ? fullscreenCytoscapeRef : cytoscapeRef;
+    
+    if (!container || !window.cytoscape) {
       console.log('📊 Graph container or Cytoscape not available');
       return;
     }
 
     // Clear previous graph
-    if (cytoscapeRef.current) {
-      cytoscapeRef.current.destroy();
+    if (cytoscapeInstance.current) {
+      cytoscapeInstance.current.destroy();
     }
 
     try {
-      cytoscapeRef.current = window.cytoscape({
-        container: graphRef.current,
+      cytoscapeInstance.current = window.cytoscape({
+        container: container,
         elements: [
           ...data.nodes.map(node => ({
             data: {
@@ -197,34 +217,62 @@ export default function Dashboard() {
               'label': 'data(label)',
               'text-valign': 'center',
               'text-halign': 'center',
-              'font-size': '8px',
-              'width': '20px',
-              'height': '20px',
-              'border-width': 1,
-              'border-color': '#1e40af'
+              'font-size': isFullscreen ? '14px' : '8px',
+              'font-weight': 'bold',
+              'color': '#ffffff',
+              'text-outline-width': 1,
+              'text-outline-color': '#1e40af',
+              'width': isFullscreen ? '40px' : '20px',
+              'height': isFullscreen ? '40px' : '20px',
+              'border-width': 2,
+              'border-color': '#1e40af',
+              'text-wrap': 'wrap',
+              'text-max-width': isFullscreen ? '120px' : '80px'
             }
           },
           {
             selector: 'edge',
             style: {
-              'width': 1,
+              'width': isFullscreen ? 3 : 1,
               'line-color': '#6b7280',
               'target-arrow-color': '#6b7280',
               'target-arrow-shape': 'triangle',
+              'target-arrow-size': isFullscreen ? 12 : 8,
               'curve-style': 'bezier',
               'label': 'data(label)',
-              'font-size': '6px'
+              'font-size': isFullscreen ? '12px' : '6px',
+              'font-weight': 'bold',
+              'color': '#374151',
+              'text-outline-width': 1,
+              'text-outline-color': '#ffffff',
+              'text-rotation': 'autorotate',
+              'text-margin-y': isFullscreen ? -15 : -10
             }
           }
         ],
         layout: {
           name: 'cose',
           animate: true,
-          animationDuration: 1000
+          animationDuration: 1000,
+          idealEdgeLength: isFullscreen ? 200 : 100,
+          nodeOverlap: isFullscreen ? 20 : 10,
+          refresh: 20,
+          fit: true,
+          padding: isFullscreen ? 50 : 30,
+          randomize: false,
+          componentSpacing: isFullscreen ? 100 : 50,
+          nodeRepulsion: isFullscreen ? 400000 : 200000,
+          edgeElasticity: isFullscreen ? 200 : 100,
+          nestingFactor: isFullscreen ? 5 : 3,
+          gravity: isFullscreen ? 80 : 40,
+          numIter: isFullscreen ? 2000 : 1000,
+          initialTemp: isFullscreen ? 200 : 100,
+          coolingFactor: 0.95,
+          minTemp: 1.0
         }
       });
 
-      console.log('📊 Graph rendered successfully');
+      console.log(`📊 Graph rendered successfully (${isFullscreen ? 'fullscreen' : 'normal'} mode)`);
     } catch (error) {
       console.error('❌ Error rendering graph:', error);
     }
@@ -754,13 +802,23 @@ export default function Dashboard() {
               <aside className="col-span-12 lg:col-span-3 glass rounded-xl p-4 self-start">
                 <div className="flex items-center justify-between mb-3">
                   <h3 className="font-semibold">Knowledge Graph</h3>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => setRightOpen(false)}
-                  >
-                    <ChevronRight />
-                  </Button>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={enterFullscreen}
+                      title="Enter fullscreen mode"
+                    >
+                      <Maximize2 className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => setRightOpen(false)}
+                    >
+                      <ChevronRight />
+                    </Button>
+                  </div>
                 </div>
                 <div className="aspect-[4/5] w-full rounded-lg border border-border/50 relative">
                   {isLoadingGraph ? (
@@ -979,6 +1037,97 @@ export default function Dashboard() {
           </DialogHeader>
         </DialogContent>
       </Dialog>
+
+      {/* Fullscreen Graph Overlay */}
+      {isGraphFullscreen && (
+        <div className="fixed inset-0 z-50 bg-background flex flex-col">
+          {/* Fullscreen Header */}
+          <div className="flex items-center justify-between p-4 border-b border-border/40 bg-background/95 backdrop-blur">
+            <div className="flex items-center gap-4">
+              <h2 className="text-xl font-semibold">Knowledge Graph - Fullscreen</h2>
+              {graphData && (
+                <div className="text-sm text-foreground/60">
+                  Nodes: {graphData.nodes.length} | Edges: {graphData.edges.length}
+                </div>
+              )}
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={exitFullscreen}
+                title="Exit fullscreen mode"
+              >
+                <Minimize2 className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={exitFullscreen}
+                title="Close fullscreen"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+
+          {/* Fullscreen Graph Container */}
+          <div className="flex-1 relative">
+            {isLoadingGraph ? (
+              <div className="absolute inset-0 flex flex-col items-center justify-center text-sm text-foreground/60">
+                <Loader2 className="h-8 w-8 animate-spin mb-4" />
+                <span>Loading graph...</span>
+              </div>
+            ) : graphData ? (
+              <div 
+                ref={fullscreenGraphRef} 
+                className="w-full h-full"
+                style={{ minHeight: 'calc(100vh - 4rem)' }}
+              />
+            ) : (
+              <div className="absolute inset-0 flex flex-col items-center justify-center text-sm text-foreground/60">
+                <div className="text-lg mb-2">Cytoscape.js visualization</div>
+                <div className="text-sm text-foreground/50">
+                  Perform a search to load graph data
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Fullscreen Footer */}
+          <div className="p-4 border-t border-border/40 bg-background/95 backdrop-blur">
+            <div className="flex items-center justify-between text-sm text-foreground/60">
+              <div>
+                Click and drag to pan • Scroll to zoom • Click nodes to view details
+              </div>
+              <div className="flex items-center gap-4">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    if (fullscreenCytoscapeRef.current) {
+                      fullscreenCytoscapeRef.current.fit();
+                    }
+                  }}
+                >
+                  Fit to Screen
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    if (fullscreenCytoscapeRef.current) {
+                      fullscreenCytoscapeRef.current.center();
+                    }
+                  }}
+                >
+                  Center
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

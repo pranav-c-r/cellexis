@@ -9,7 +9,7 @@ function Model({ url }: { url: string }) {
   
   useFrame((state, delta) => {
     if (modelRef.current) {
-      modelRef.current.rotation.y += delta * 0.1
+      modelRef.current.rotation.y += delta * 0.5
     }
   })
   

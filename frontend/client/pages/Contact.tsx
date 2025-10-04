@@ -24,6 +24,7 @@ export default function Contact() {
             });
           }}
         >
+          {/* Name, Email, Message */}
           <Input required placeholder="Name" />
           <Input required type="email" placeholder="Email" />
           <Textarea required rows={5} placeholder="Message" />

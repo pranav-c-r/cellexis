@@ -2,6 +2,7 @@ import { Canvas, useFrame } from '@react-three/fiber'
 import { OrbitControls, useGLTF } from '@react-three/drei'
 import { Suspense, useRef } from 'react'
 import { Group } from 'three'
+import Loading from './../ui/Loading'
 
 function Model({ url }: { url: string }) {
   const { scene } = useGLTF(url)
@@ -26,7 +27,7 @@ function ModelViewer() {
       <Canvas className='' style={{ background: 'transparent'}} camera={{ position: [1, 0, 0], fov: 75}}>
         <ambientLight intensity={0.5} />
         <pointLight position={[10, 10, 10]} />``
-        <Suspense fallback={null}>
+        <Suspense fallback={< Loading />}>
           <Model url="/models/blue-plt.glb" />
         </Suspense>
         <OrbitControls enableZoom={false} />

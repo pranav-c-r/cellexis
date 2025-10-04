@@ -28,7 +28,7 @@ import WhitePinkPlanet from "@/components/model/white-pink-plt"
 import BluePinkPlanet from "@/components/model/blue-pink-planet"
 import BrownPlanet from "@/components/model/brown-plt"
 import BlueBrownPlanet from "@/components/model/blue-brown-plt"
-import Stars from "@/components/ui/stars"
+import Stars from "@/components/ui/stars" 
 import InstallButton from "@/components/ui/InstallButton"
 
 const ASTRONAUT_URL =

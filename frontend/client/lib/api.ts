@@ -1,5 +1,5 @@
 // API service for backend integration
-const API_BASE_URL = 'http://localhost:8002';
+const API_BASE_URL = 'http://127.0.0.1:8000'; // match your actual backend
 
 export interface RAGResponse {
   query: string;
@@ -53,37 +53,39 @@ class ApiService {
   }
 
   // RAG Search - Main functionality
-  async searchRAG(query: string, topK: number = 5): Promise<RAGResponse> {
-    try {
-      console.log('🔍 Making RAG search request:', { query, topK, url: `${this.baseUrl}/api/search` });
-      
-      const response = await fetch(`${this.baseUrl}/api/search`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          query,
-        }),
-      });
+  // RAG Search - Main functionality
+async searchRAG(query: string, topK: number = 5): Promise<RAGResponse> {
+  try {
+    console.log('🔍 Making RAG search request:', { query, topK, url: `${this.baseUrl}/search-rag` });
+    
+    const response = await fetch(`${this.baseUrl}/search-rag`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        query,
+        top_k: topK,
+      }),
+    });
 
-      console.log('📡 Response status:', response.status);
-      console.log('📡 Response headers:', Object.fromEntries(response.headers.entries()));
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('❌ Response error:', errorText);
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data = await response.json();
-      console.log('✅ RAG search successful:', data);
-      return data;
-    } catch (error) {
-      console.error('❌ Error in RAG search:', error);
-      throw error;
+    console.log('📡 Response status:', response.status);
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('❌ Response error:', errorText);
+      throw new Error(`HTTP error! status: ${response.status}`);
     }
+
+    const data = await response.json();
+    console.log('✅ RAG search successful:', data);
+    return data;
+  } catch (error) {
+    console.error('❌ Error in RAG search:', error);
+    throw error;
   }
+}
+
 
   // Get Knowledge Graph data
   async getGraph(filterType?: string): Promise<GraphResponse> {

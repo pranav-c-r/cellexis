@@ -86,6 +86,10 @@ export default function Dashboard() {
   const [isVoiceActive, setIsVoiceActive] = useState(false);
   const [transcript, setTranscript] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
+  // New search state
+  const [searchQuery, setSearchQuery] = useState("");
+  const [papers, setPapers] = useState<Paper[]>(mockPapers);
+  const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
   const {user,signOut} = useAuth();
   const recognitionRef = useRef<any>(null);
@@ -223,6 +227,30 @@ export default function Dashboard() {
       };
       
       speechSynthesis.speak(utterance);
+    }
+  };
+
+  // Search handler function
+  const handleSearch = async () => {
+    if (!searchQuery.trim()) return;
+    
+    setIsLoading(true);
+    try {
+      const response = await fetch('http://localhost:8002/api/search', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query: searchQuery })
+      });
+      
+      if (!response.ok) throw new Error('Search failed');
+      
+      const data = await response.json();
+      setPapers(data.results || mockPapers);
+    } catch (error) {
+      console.error('Search error:', error);
+      setPapers(mockPapers); 
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -516,17 +544,42 @@ export default function Dashboard() {
               <div className="glass rounded-xl p-4">
                 <h3 className="font-semibold mb-2">Search Papers</h3>
                 <div className="flex gap-2">
-                  <Input placeholder="Search across NASA bioscience publications..." />
-                  <Button className="bg-gradient-to-r from-primary via-accent to-secondary text-black">
-                    Search
+                  <Input 
+                    placeholder="Search across NASA bioscience publications..." 
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
+                  />
+                  <Button 
+                    className="bg-gradient-to-r from-primary via-accent to-secondary text-black"
+                    onClick={handleSearch}
+                    disabled={isLoading}
+                  >
+                    {isLoading ? "Searching..." : "Search"}
                   </Button>
                 </div>
               </div>
               <div className="glass rounded-xl p-4">
-                <h3 className="font-semibold">Search Results</h3>
-                <p className="mt-2 text-sm text-foreground/80">
-                  Use the filters to find relevant papers from the NASA database.
-                </p>
+                <h3 className="font-semibold">Search Results ({papers.length})</h3>
+                <div className="mt-4 space-y-2 max-h-96 overflow-y-auto">
+                  {papers.length > 0 ? (
+                    papers.map((paper) => (
+                      <div 
+                        key={paper.id} 
+                        className="p-3 border border-border/50 rounded-lg cursor-pointer hover:bg-accent/20 transition-colors"
+                        onClick={() => setSelected(paper)}
+                      >
+                        <h4 className="font-medium text-sm">{paper.title}</h4>
+                        <p className="text-xs text-foreground/70 mt-1">{paper.summary}</p>
+                        <p className="text-xs text-foreground/50 mt-1">Year: {paper.year}</p>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-sm text-foreground/60">
+                      {searchQuery ? "No results found. Try different keywords." : "Enter a search query to find papers from the NASA bioscience database."}
+                    </p>
+                  )}
+                </div>
               </div>
             </main>
 

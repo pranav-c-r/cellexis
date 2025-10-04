@@ -3,15 +3,20 @@ import json
 import os
 from dotenv import load_dotenv
 
-# Load env variables
-load_dotenv()
+# Load env variables from the correct location
+# Get the backend directory (parent of gemini directory)
+backend_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+env_path = os.path.join(backend_dir, ".env")
+print(f"Loading .env from: {env_path}")
+load_dotenv(env_path)
+
 api_key = os.getenv("GEMINI_API_KEY")
 if not api_key:
-    raise ValueError("⚠️ GEMINI_API_KEY not found in .env file")
+    raise ValueError(f"⚠️ GEMINI_API_KEY not found in .env file at {env_path}")
 
 # Configure Gemini
 genai.configure(api_key=api_key)
-model = genai.GenerativeModel("gemini-pro")
+model = genai.GenerativeModel("gemini-2.0-flash")
 
 
 # 1️⃣ Summarize function

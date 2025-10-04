@@ -10,13 +10,14 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
-import { ChevronLeft, ChevronRight, Search, User, LogOut, Mic, MicOff } from "lucide-react";
+import { ChevronLeft, ChevronRight, Search, User, LogOut, Mic, MicOff, Loader2 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import PaperComparison from "@/components/PaperComparison";
 import BookmarksNotes from "@/components/BookmarksNotes";
 import ExportShare from "@/components/ExportShare";
 import UserFeedback from "@/components/UserFeedback";
 import VisualizationEnhancements from "@/components/VisualizationEnhancements";
+import { apiService, RAGResponse, GraphResponse } from "@/lib/api";
 
 interface Paper {
   id: string;
@@ -86,10 +87,59 @@ export default function Dashboard() {
   const [isVoiceActive, setIsVoiceActive] = useState(false);
   const [transcript, setTranscript] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
+  
+  // Search functionality state
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<RAGResponse | null>(null);
+  const [isSearching, setIsSearching] = useState(false);
+  const [graphData, setGraphData] = useState<GraphResponse | null>(null);
+  const [isLoadingGraph, setIsLoadingGraph] = useState(false);
+  
   const navigate = useNavigate();
   const {user,signOut} = useAuth();
   const recognitionRef = useRef<any>(null);
   const silenceTimerRef = useRef<NodeJS.Timeout>();
+
+  // Search functions
+  const handleSearch = async () => {
+    if (!searchQuery.trim()) return;
+    
+    console.log('🚀 Starting search with query:', searchQuery);
+    setIsSearching(true);
+    try {
+      console.log('📞 Calling apiService.searchRAG...');
+      const results = await apiService.searchRAG(searchQuery, 5);
+      console.log('📊 Search results received:', results);
+      setSearchResults(results);
+      
+      // Load graph data after search
+      console.log('📊 Loading graph data...');
+      await loadGraphData();
+    } catch (error) {
+      console.error('❌ Search error:', error);
+      setSearchResults({
+        query: searchQuery,
+        answer: "Error performing search. Please try again.",
+        citations: [],
+        chunks_used: 0
+      });
+    } finally {
+      console.log('✅ Search completed, setting isSearching to false');
+      setIsSearching(false);
+    }
+  };
+
+  const loadGraphData = async () => {
+    setIsLoadingGraph(true);
+    try {
+      const graph = await apiService.getGraph();
+      setGraphData(graph);
+    } catch (error) {
+      console.error('Graph loading error:', error);
+    } finally {
+      setIsLoadingGraph(false);
+    }
+  };
 
   // Initialize speech recognition
   const initializeSpeechRecognition = () => {
@@ -516,17 +566,61 @@ export default function Dashboard() {
               <div className="glass rounded-xl p-4">
                 <h3 className="font-semibold mb-2">Search Papers</h3>
                 <div className="flex gap-2">
-                  <Input placeholder="Search across NASA bioscience publications..." />
-                  <Button className="bg-gradient-to-r from-primary via-accent to-secondary text-black">
-                    Search
+                  <Input 
+                    placeholder="Search across NASA bioscience publications..." 
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
+                  />
+                  <Button 
+                    onClick={handleSearch}
+                    disabled={isSearching || !searchQuery.trim()}
+                    className="bg-gradient-to-r from-primary via-accent to-secondary text-black"
+                  >
+                    {isSearching ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
                   </Button>
                 </div>
               </div>
+              
+              {/* Search Results */}
               <div className="glass rounded-xl p-4">
-                <h3 className="font-semibold">Search Results</h3>
-                <p className="mt-2 text-sm text-foreground/80">
-                  Use the filters to find relevant papers from the NASA database.
-                </p>
+                <h3 className="font-semibold mb-4">Search Results</h3>
+                {isSearching ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="h-6 w-6 animate-spin mr-2" />
+                    <span>Searching NASA publications...</span>
+                  </div>
+                ) : searchResults ? (
+                  <div className="space-y-4">
+                    <div className="p-4 bg-muted/20 rounded-lg">
+                      <h4 className="font-medium mb-2">Answer:</h4>
+                      <p className="text-sm text-foreground/80 whitespace-pre-wrap">
+                        {searchResults.answer}
+                      </p>
+                    </div>
+                    
+                    {searchResults.citations.length > 0 && (
+                      <div>
+                        <h4 className="font-medium mb-2">Citations:</h4>
+                        <div className="space-y-2">
+                          {searchResults.citations.map((citation, index) => (
+                            <div key={index} className="text-xs text-foreground/70 bg-background/50 p-2 rounded">
+                              {citation.paper_id} (Page {citation.page_num}) - Score: {citation.score.toFixed(3)}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    
+                    <div className="text-xs text-foreground/60">
+                      Based on {searchResults.chunks_used} relevant chunks from NASA publications
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-sm text-foreground/80">
+                    Enter a search query to find relevant information from NASA bioscience publications.
+                  </p>
+                )}
               </div>
             </main>
 
@@ -534,7 +628,7 @@ export default function Dashboard() {
             {rightOpen ? (
               <aside className="col-span-12 lg:col-span-3 glass rounded-xl p-4 self-start">
                 <div className="flex items-center justify-between mb-3">
-                  <h3 className="font-semibold">Graph Explorer</h3>
+                  <h3 className="font-semibold">Knowledge Graph</h3>
                   <Button
                     variant="ghost"
                     size="icon"
@@ -544,7 +638,37 @@ export default function Dashboard() {
                   </Button>
                 </div>
                 <div className="aspect-[4/5] w-full rounded-lg border border-border/50 grid place-items-center text-sm text-foreground/60">
-                  Cytoscape.js preview here
+                  {isLoadingGraph ? (
+                    <div className="flex flex-col items-center">
+                      <Loader2 className="h-6 w-6 animate-spin mb-2" />
+                      <span>Loading graph...</span>
+                    </div>
+                  ) : graphData ? (
+                    <div className="w-full h-full p-2">
+                      <div className="text-xs mb-2">
+                        Nodes: {graphData.nodes.length} | Edges: {graphData.edges.length}
+                      </div>
+                      <div className="space-y-1 max-h-48 overflow-y-auto">
+                        {graphData.nodes.slice(0, 10).map((node, index) => (
+                          <div key={index} className="text-xs bg-background/50 p-1 rounded">
+                            {node.data.label} ({node.data.type})
+                          </div>
+                        ))}
+                        {graphData.nodes.length > 10 && (
+                          <div className="text-xs text-foreground/50">
+                            +{graphData.nodes.length - 10} more nodes
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="text-center">
+                      <div className="text-xs mb-2">Cytoscape.js visualization</div>
+                      <div className="text-xs text-foreground/50">
+                        Perform a search to load graph data
+                      </div>
+                    </div>
+                  )}
                 </div>
                 <p className="mt-3 text-xs text-foreground/60">
                   Click nodes to view related papers.
@@ -570,35 +694,62 @@ export default function Dashboard() {
               <div className="glass rounded-xl p-4">
                 <h3 className="font-semibold mb-2">Ask a question</h3>
                 <div className="flex gap-2">
-                  <Input placeholder="e.g., How does microgravity affect immune response?" />
-                  <Button className="bg-gradient-to-r from-primary via-accent to-secondary text-black">
-                    Ask
+                  <Input 
+                    placeholder="e.g., How does microgravity affect immune response?" 
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
+                  />
+                  <Button 
+                    onClick={handleSearch}
+                    disabled={isSearching || !searchQuery.trim()}
+                    className="bg-gradient-to-r from-primary via-accent to-secondary text-black"
+                  >
+                    {isSearching ? <Loader2 className="h-4 w-4 animate-spin" /> : "Ask"}
                   </Button>
                 </div>
               </div>
               <div className="glass rounded-xl p-4">
                 <h3 className="font-semibold">Answer</h3>
-                <p className="mt-2 text-sm text-foreground/80">
-                  Gemini response will appear here.
-                </p>
-                <div className="mt-4 text-xs text-foreground/60">
-                  Citations: NASA-001 p.2, NASA-214 p.5
-                </div>
-                <details className="mt-3">
-                  <summary className="cursor-pointer text-sm text-foreground/80">
-                    Retrieved snippets
-                  </summary>
-                  <ul className="mt-2 list-disc pl-5 text-sm text-foreground/70 space-y-1">
-                    <li>
-                      "Microgravity reduced T-cell activation in missions STS-XXX
-                      ..."
-                    </li>
-                    <li>
-                      "Mitochondrial fragmentation increased under flight conditions
-                      ..."
-                    </li>
-                  </ul>
-                </details>
+                {isSearching ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="h-6 w-6 animate-spin mr-2" />
+                    <span>Searching NASA publications...</span>
+                  </div>
+                ) : searchResults ? (
+                  <div className="space-y-4">
+                    <div className="p-4 bg-muted/20 rounded-lg">
+                      <p className="text-sm text-foreground/80 whitespace-pre-wrap">
+                        {searchResults.answer}
+                      </p>
+                    </div>
+                    
+                    {searchResults.citations.length > 0 && (
+                      <div className="mt-4 text-xs text-foreground/60">
+                        Citations: {searchResults.citations.map(c => `${c.paper_id} p.${c.page_num}`).join(', ')}
+                      </div>
+                    )}
+                    
+                    {searchResults.retrieved_chunks && (
+                      <details className="mt-3">
+                        <summary className="cursor-pointer text-sm text-foreground/80">
+                          Retrieved snippets ({searchResults.chunks_used})
+                        </summary>
+                        <ul className="mt-2 list-disc pl-5 text-sm text-foreground/70 space-y-1">
+                          {searchResults.retrieved_chunks.slice(0, 3).map((chunk, index) => (
+                            <li key={index}>
+                              "{chunk.text.substring(0, 100)}..."
+                            </li>
+                          ))}
+                        </ul>
+                      </details>
+                    )}
+                  </div>
+                ) : (
+                  <p className="mt-2 text-sm text-foreground/80">
+                    Ask a question about NASA bioscience research to get AI-powered answers.
+                  </p>
+                )}
               </div>
             </main>
           </div>

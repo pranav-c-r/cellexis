@@ -1,7 +1,27 @@
 from fastapi import FastAPI, Body
+from fastapi.middleware.cors import CORSMiddleware
 from .neo4j_client import driver
+from .rag_service import get_rag_service
+from pydantic import BaseModel
+import sys
+import os
+
+# Add backend directory to path for gemini imports
+backend_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.append(backend_dir)
+
+from gemini.gemini_utils import summarize, qa, safe_extract_kg
 
 app = FastAPI()
+
+# Add CORS middleware for frontend integration
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000", "http://localhost:5173", "http://localhost:8081", "http://127.0.0.1:3000", "http://127.0.0.1:5173", "http://127.0.0.1:8081"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # -------------------------
 # ROOT / HEALTHCHECK
@@ -12,6 +32,8 @@ def root():
 
 @app.get("/pingdb")
 def ping_db():
+    if driver is None:
+        return {"error": "Neo4j driver not initialized. Check environment variables."}
     try:
         with driver.session() as session:
             result = session.run("RETURN 'pong' AS msg")
@@ -158,17 +180,41 @@ class QARequest(BaseModel):
 class KGRequest(BaseModel):
     text: str
 
+class RAGRequest(BaseModel):
+    query: str
+    top_k: int = 5
+
 @app.post("/summarize")
 def summarize_paper(req: SummarizeRequest):
     return summarize(req.text)
 
-@app.post("/qa")
+@app.post("/qa-direct")
 def qa_answer(req: QARequest):
     return qa(req.query, req.snippets)
 
 @app.post("/extract_kg")
 def extract_kg(req: KGRequest):
     return safe_extract_kg(req.text)
+
+# -------------------------
+# RAG ENDPOINT (MAIN SEARCH)
+# -------------------------
+@app.post("/search-rag")
+def search_rag(req: RAGRequest):
+    """
+    Main RAG endpoint: FAISS search + Gemini answer generation
+    """
+    try:
+        rag_service = get_rag_service()
+        result = rag_service.process_query(req.query, req.top_k)
+        return result
+    except Exception as e:
+        return {
+            "query": req.query,
+            "answer": f"Error processing query: {str(e)}",
+            "citations": [],
+            "chunks_used": 0
+        }
 
 # QUERY / SEARCH / GRAPH ENDPOINTS
 # -------------------------
@@ -201,71 +247,53 @@ def get_paper(paper_title: str):
 
 @app.get("/graph")
 def get_graph(filter_type: str = None):
+    """
+    Get knowledge graph data for Cytoscape visualization
+    """
+    if driver is None:
+        return {"nodes": [], "edges": [], "error": "Neo4j driver not initialized"}
+    
     with driver.session() as session:
         if filter_type:
             query = f"MATCH (n:{filter_type})-[r]->(m) RETURN n, r, m LIMIT 50"
             result = session.run(query)
         else:
             result = session.run("MATCH (n)-[r]->(m) RETURN n, r, m LIMIT 50")
-        graph = []
+        
+        nodes = set()
+        edges = []
+        
         for record in result:
-            graph.append({
-                "from": dict(record["n"]),
-                "to": dict(record["m"]),
-                "type": record["r"].type
+            from_node = dict(record["n"])
+            to_node = dict(record["m"])
+            rel_type = record["r"].type
+            
+            # Add nodes to set (to avoid duplicates)
+            nodes.add((from_node.get("name", "unknown"), from_node.get("labels", ["Unknown"])[0] if "labels" in from_node else "Unknown"))
+            nodes.add((to_node.get("name", "unknown"), to_node.get("labels", ["Unknown"])[0] if "labels" in to_node else "Unknown"))
+            
+            # Add edge
+            edges.append({
+                "data": {
+                    "id": f"{from_node.get('name', 'unknown')}-{to_node.get('name', 'unknown')}",
+                    "source": from_node.get("name", "unknown"),
+                    "target": to_node.get("name", "unknown"),
+                    "label": rel_type
+                }
             })
-    return graph
-
-# -------------------------
-# QA / RAG ENDPOINT (SKELETON)
-# -------------------------
-@app.post("/qa")
-def qa_endpoint(query: str = Body(...)):
-    # Placeholder retrieval (replace later with real chunks)
-    retrieved_chunks = [{"paper_id": "paper1", "chunk_text": "Example text", "page_num": 1}]
-    
-    # Placeholder Gemini answer (replace later)
-    answer = f"Answer for '{query}' based on {len(retrieved_chunks)} chunks."
-    
-    return {
-        "query": query,
-        "answer": answer,
-        "citations": [{"paper_id": c["paper_id"], "page_num": c["page_num"]} for c in retrieved_chunks]
-    }
-
-# -------------------------
-# KG EXTRACTION ENDPOINT (SKELETON)
-# -------------------------
-@app.post("/extract-kg")
-def extract_kg(chunk_text: str = Body(...)):
-    # Placeholder entities & relationships
-    extracted_entities = {
-        "Organism": ["Arabidopsis"],
-        "Gene": ["AT1G01010"],
-        "Paper": ["paper1"],
-        "Outcome": ["Increased growth"],
-        "Assay": ["RNA-seq"],
-        "ExperimentType": ["Microgravity"],
-        "Mission": ["ISS2025"]
-    }
-    extracted_relationships = [
-        {"from": "paper1", "to": "Arabidopsis", "type": "STUDIES"},
-        {"from": "paper1", "to": "AT1G01010", "type": "STUDIED_IN"},
-        {"from": "paper1", "to": "Increased growth", "type": "REPORTS"},
-        {"from": "paper1", "to": "RNA-seq", "type": "USES"},
-        {"from": "paper1", "to": "Microgravity", "type": "PERFORMED_ON"},
-        {"from": "paper1", "to": "ISS2025", "type": "CONDUCTED_IN"},
-    ]
-
-
-    with driver.session() as session:
-        for entity_type, names in extracted_entities.items():
-            for name in names:
-                session.run(f"MERGE (n:{entity_type} {{name: $name}})", name=name)
-        for rel in extracted_relationships:
-            session.run(f"""
-                MATCH (from {{name: $from_name}}), (to {{name: $to_name}})
-                MERGE (from)-[r:{rel['type']}]->(to)
-            """, from_name=rel["from"], to_name=rel["to"])
-
-    return {"message": "KG extraction skeleton executed"}
+        
+        # Convert nodes set to list
+        nodes_list = []
+        for node_name, node_type in nodes:
+            nodes_list.append({
+                "data": {
+                    "id": node_name,
+                    "label": node_name,
+                    "type": node_type
+                }
+            })
+        
+        return {
+            "nodes": nodes_list,
+            "edges": edges
+        }

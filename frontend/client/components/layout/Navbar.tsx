@@ -17,6 +17,11 @@ export default function Navbar() {
 
   const navItems = [
     { id: "home", label: "Home" },
+    { id: "problem", label: "Challenge" },
+    { id: "solution", label: "Solution" },
+    { id: "impact", label: "Impact & Benefits" },
+    { id: "feasibility", label: "Feasibility" },
+    { id: "scalability", label: "Scalability " },
     { id: "features", label: "Features" },
     { id: "statistics", label: "Statistics" },
     { id: "contact", label: "Contact" },
@@ -37,12 +42,12 @@ export default function Navbar() {
           </Link>
 
           {/* Center: nav */}
-          <nav className="hidden lg:flex items-center gap-4 xl:gap-6 text-sm leading-5">
+          <nav className="hidden lg:flex items-center gap-2 xl:gap-3 text-xs xl:text-sm leading-5 overflow-x-auto">
             {navItems.map((item) => (
               <button
                 key={item.id}
                 onClick={() => scrollToSection(item.id)}
-                className="transition-colors font-semibold text-foreground hover:text-foreground whitespace-nowrap"
+                className="transition-colors font-semibold text-foreground hover:text-foreground whitespace-nowrap px-2 py-1 rounded hover:bg-background/20"
               >
                 {item.label}
               </button>

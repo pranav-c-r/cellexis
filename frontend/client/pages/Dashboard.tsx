@@ -80,7 +80,7 @@ const VOICE_COMMANDS = {
 export default function Dashboard() {
   const [leftOpen, setLeftOpen] = useState(true);
   const [rightOpen, setRightOpen] = useState(true);
-  const [activeTab, setActiveTab] = useState("comparison");
+  const [activeTab, setActiveTab] = useState("search");
   const [selected, setSelected] = useState<Paper | null>(null);
   const [isListening, setIsListening] = useState(false);
   const [isVoiceActive, setIsVoiceActive] = useState(false);

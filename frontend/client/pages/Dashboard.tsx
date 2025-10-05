@@ -580,7 +580,7 @@ export default function Dashboard() {
     <div className="bg-space min-h-screen">
       {/* Navigation Bar */}
       <div className="border-b border-border/40 bg-background/60 backdrop-blur">
-        <div className="container mx-auto px-4 flex items-center justify-between py-2 md:gap-4">
+        <div className=" mx-auto px-4 flex items-center justify-between py-2 md:gap-4">
           {/* Logo */}
           <Link to="/" className="flex items-center gap-2 group flex-shrink-0">
             <img
@@ -762,6 +762,7 @@ export default function Dashboard() {
                       </p>
                     </div>
                     
+                    {console.log('📋 Citations data:', searchResults.citations)}
                     {searchResults.citations && searchResults.citations.length > 0 ? (
                       <div>
                         <h4 className="font-medium mb-2">Citations:</h4>

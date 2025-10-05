@@ -1,7 +1,14 @@
 // API service for backend integration
-import config from './config';
+import { config } from './config';
 
 const API_BASE_URL = config.API_BASE_URL;
+
+console.log('🔧 API Configuration:', {
+  API_BASE_URL,
+  isDev: import.meta.env.DEV,
+  isProd: import.meta.env.PROD,
+  hostname: typeof window !== 'undefined' ? window.location.hostname : 'unknown'
+});
 
 export interface RAGResponse {
   query: string;
@@ -64,10 +71,18 @@ class ApiService {
 
   // RAG Search - Main functionality
   async searchRAG(query: string, topK: number = 5): Promise<RAGResponse> {
+    const fullUrl = `${this.baseUrl}${config.endpoints.search}`;
+    console.log('🔍 Making RAG search request:', { 
+      query, 
+      topK, 
+      baseUrl: this.baseUrl,
+      endpoint: config.endpoints.search,
+      fullUrl: fullUrl,
+      configApiUrl: config.API_BASE_URL
+    });
+    
     try {
-      console.log('🔍 Making RAG search request:', { query, topK, url: `${this.baseUrl}${config.endpoints.search}` });
-      
-      const response = await fetch(`${this.baseUrl}${config.endpoints.search}`, {
+      const response = await fetch(fullUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

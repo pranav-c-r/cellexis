@@ -265,8 +265,8 @@ export default function Index() {
               </div>
               <h3 className="text-xl font-semibold mb-4">Proven Technology Stack</h3>
               <ul className="space-y-2 text-sm text-foreground/80 text-left">
-                <li>• OpenAI/Anthropic LLMs for natural language processing</li>
-                <li>• Vector databases (Pinecone/Weaviate) for semantic search</li>
+                <li>• Gemini LLMs for natural language processing</li>
+                <li>• FAISS for semantic search</li>
                 <li>• Neo4j for knowledge graph visualization</li>
                 <li>• React/FastAPI for scalable web interface</li>
               </ul>
@@ -288,7 +288,7 @@ export default function Index() {
                 <TrendingUp size={24} />
               </div>
               <h3 className="text-xl font-semibold mb-4">MVP to Production</h3>
-              <ul className="space-y-2 text-sm text-foreground/80">
+              <ul className="space-y-2 text-sm text-left text-foreground/80">
                 <li>• Phase 1: Core RAG system (4 weeks)</li>
                 <li>• Phase 2: Knowledge graph integration (6 weeks)</li>
                 <li>• Phase 3: Advanced analytics (8 weeks)</li>
@@ -405,8 +405,8 @@ export default function Index() {
             />
             <FeatureCard
               icon={<Sparkles />}
-              title="Discover Insights & Impacts"
-              desc="Surface patterns, trends and actionable findings."
+              title="Voice Assisted Navigation"
+              desc="Navigate across files seamlessly with voice commands."
             />
           </div>
         </div>

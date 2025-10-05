@@ -50,6 +50,7 @@ export default function Login() {
           </div>
           <div className="grid gap-4">
             <Input
+              required
               placeholder="Username"
               value={username}
               onChange={(e) => setUsername(e.target.value)}

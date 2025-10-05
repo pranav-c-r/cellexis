@@ -16,7 +16,15 @@ export interface RAGResponse {
     chunk_id: string;
     text: string;
     page_num: number;
+    source?: string;
+    neo4j_boost?: number;
+    paper_rank?: number;
   }>;
+  diversity_metrics?: {
+    unique_papers: number;
+    neo4j_boosted_chunks: number;
+    search_method: string;
+  };
 }
 
 export interface GraphResponse {
@@ -87,11 +95,21 @@ class ApiService {
   }
 
   // Get Knowledge Graph data
-  async getGraph(filterType?: string): Promise<GraphResponse> {
+  async getGraph(filterType?: string, query?: string): Promise<GraphResponse> {
     try {
-      const url = filterType 
-        ? `${this.baseUrl}/graph?filter_type=${encodeURIComponent(filterType)}`
-        : `${this.baseUrl}/graph`;
+      let url = `${this.baseUrl}/graph`;
+      const params = new URLSearchParams();
+      
+      if (filterType) {
+        params.append('filter_type', filterType);
+      }
+      if (query) {
+        params.append('query', query);
+      }
+      
+      if (params.toString()) {
+        url += `?${params.toString()}`;
+      }
       
       console.log('📊 Fetching graph from:', url);
       
@@ -148,6 +166,20 @@ class ApiService {
     } catch (error) {
       console.error('Database ping failed:', error);
       return false;
+    }
+  }
+
+  // Get search system statistics
+  async getSearchStats(): Promise<any> {
+    try {
+      const response = await fetch(`${this.baseUrl}/search-stats`);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      return await response.json();
+    } catch (error) {
+      console.error('Error fetching search stats:', error);
+      throw error;
     }
   }
 

@@ -102,6 +102,7 @@ export default function Dashboard() {
   const [graphData, setGraphData] = useState<GraphResponse | null>(null);
   const [isLoadingGraph, setIsLoadingGraph] = useState(false);
   const [isGraphFullscreen, setIsGraphFullscreen] = useState(false);
+  const [searchStats, setSearchStats] = useState<any>(null);
 
   const navigate = useNavigate();
   const { user, signOut } = useAuth();
@@ -126,7 +127,7 @@ export default function Dashboard() {
 
       // Load graph data after search
       console.log('📊 Loading graph data...');
-      await loadGraphData();
+      await loadGraphData(searchQuery);
     } catch (error) {
       console.error('❌ Search error:', error);
       setSearchResults({
@@ -168,7 +169,7 @@ export default function Dashboard() {
 
       // Load graph data after search
       console.log('📊 Loading graph data...');
-      await loadGraphData();
+      await loadGraphData(searchQuery);
     } catch (error) {
       console.error('❌ Enhanced search error:', error);
       setSearchResults({
@@ -183,11 +184,11 @@ export default function Dashboard() {
     }
   };
 
-  const loadGraphData = async () => {
-    console.log('📊 Starting to load graph data...');
+  const loadGraphData = async (query?: string) => {
+    console.log('📊 Starting to load graph data...', query ? `for query: "${query}"` : '');
     setIsLoadingGraph(true);
     try {
-      const graph = await apiService.getGraph();
+      const graph = await apiService.getGraph(undefined, query);
       console.log('📊 Graph data received:', graph);
       setGraphData(graph);
 
@@ -424,7 +425,7 @@ export default function Dashboard() {
 
       // Also get graph data for visual representation
       try {
-        const graphResults = await apiService.getGraph();
+        const graphResults = await apiService.getGraph(undefined, query);
         setGraphData(graphResults);
         if (graphResults && graphResults.nodes.length > 0) {
           renderGraph(graphResults);
@@ -644,6 +645,21 @@ export default function Dashboard() {
     };
   }, [isVoiceActive]);
 
+  // Load search stats on component mount
+  useEffect(() => {
+    const loadSearchStats = async () => {
+      try {
+        const stats = await apiService.getSearchStats();
+        setSearchStats(stats);
+        console.log('📊 Search stats loaded:', stats);
+      } catch (error) {
+        console.error('❌ Failed to load search stats:', error);
+      }
+    };
+
+    loadSearchStats();
+  }, []);
+
   // Load Cytoscape library
   useEffect(() => {
     const loadCytoscape = () => {
@@ -813,6 +829,34 @@ export default function Dashboard() {
                     <Input placeholder="Mission" />
                   </div>
                   <div className="mt-3 space-y-2">
+                    <h4 className="text-sm text-foreground/70">Search Stats</h4>
+                    {searchStats ? (
+                      <div className="space-y-2 text-xs text-foreground/60">
+                        <div className="flex justify-between">
+                          <span>FAISS Index:</span>
+                          <span className="text-blue-600">{searchStats.faiss_index_size?.toLocaleString() || 'N/A'}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Chunks:</span>
+                          <span className="text-green-600">{searchStats.chunks_loaded?.toLocaleString() || 'N/A'}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Papers:</span>
+                          <span className="text-purple-600">{searchStats.papers_available?.toLocaleString() || 'N/A'}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Neo4j:</span>
+                          <span className={searchStats.neo4j_connected ? "text-green-600" : "text-red-600"}>
+                            {searchStats.neo4j_connected ? 'Connected' : 'Disconnected'}
+                          </span>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="text-xs text-foreground/50">Loading stats...</div>
+                    )}
+                  </div>
+
+                  <div className="mt-3 space-y-2">
                     <h4 className="text-sm text-foreground/70">Results</h4>
                     <div className="space-y-2 max-h-64 overflow-auto pr-1">
                       {mockPapers.map((p) => (
@@ -897,6 +941,12 @@ export default function Dashboard() {
 
                     <div className="text-xs text-foreground/60">
                       Based on {searchResults.chunks_used} relevant chunks from NASA publications
+                      {searchResults.diversity_metrics && (
+                        <div className="mt-1 text-xs text-blue-600">
+                          📊 {searchResults.diversity_metrics.unique_papers} unique papers • 
+                          🔗 {searchResults.diversity_metrics.neo4j_boosted_chunks} graph-enhanced results
+                        </div>
+                      )}
                     </div>
                   </div>
                 ) : (
@@ -1050,7 +1100,12 @@ export default function Dashboard() {
 
                     <div className="flex items-center gap-2 text-xs text-foreground/60 bg-background/30 p-2 rounded">
                       <div className="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
-                      <span>Response enhanced by  AI for better context and scientific accuracy</span>
+                      <span>Response enhanced by AI for better context and scientific accuracy</span>
+                      {searchResults.diversity_metrics && (
+                        <div className="ml-2 text-xs text-green-600">
+                          • {searchResults.diversity_metrics.unique_papers} papers • {searchResults.diversity_metrics.neo4j_boosted_chunks} graph-enhanced
+                        </div>
+                      )}
                     </div>
                   </div>
                 ) : (

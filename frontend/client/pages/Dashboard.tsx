@@ -762,7 +762,6 @@ export default function Dashboard() {
                       </p>
                     </div>
                     
-                    {console.log('📋 Citations data:', searchResults.citations)}
                     {searchResults.citations && searchResults.citations.length > 0 ? (
                       <div>
                         <h4 className="font-medium mb-2">Citations:</h4>

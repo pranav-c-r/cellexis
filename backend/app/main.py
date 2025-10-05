@@ -202,7 +202,7 @@ def extract_kg(req: KGRequest):
 @app.post("/search-rag")
 def search_rag(req: RAGRequest):
     """
-    Main RAG endpoint: FAISS search + Gemini answer generation
+    Main RAG endpoint: Enhanced FAISS + Neo4j search + Gemini answer generation
     """
     try:
         rag_service = get_rag_service()
@@ -215,6 +215,24 @@ def search_rag(req: RAGRequest):
             "citations": [],
             "chunks_used": 0
         }
+
+@app.get("/search-stats")
+def get_search_stats():
+    """
+    Get search system statistics
+    """
+    try:
+        rag_service = get_rag_service()
+        stats = {
+            "faiss_index_size": rag_service.index.ntotal if rag_service.index else 0,
+            "chunks_loaded": len(rag_service.chunks),
+            "papers_available": len(rag_service.paper_chunks_map),
+            "neo4j_connected": rag_service.driver is not None,
+            "embedding_model": rag_service.model_name if rag_service.model else None
+        }
+        return stats
+    except Exception as e:
+        return {"error": str(e)}
 
 # QUERY / SEARCH / GRAPH ENDPOINTS
 # -------------------------
@@ -246,18 +264,35 @@ def get_paper(paper_title: str):
     return data
 
 @app.get("/graph")
-def get_graph(filter_type: str = None):
+def get_graph(filter_type: str = None, query: str = None):
     """
     Get knowledge graph data for Cytoscape visualization
+    If query is provided, find nodes related to the search query
     """
     if driver is None:
         return {"nodes": [], "edges": [], "error": "Neo4j driver not initialized"}
     
     with driver.session() as session:
-        if filter_type:
-            query = f"MATCH (n:{filter_type})-[r]->(m) RETURN n, r, m LIMIT 50"
-            result = session.run(query)
+        if query:
+            # Search for nodes related to the query
+            cypher_query = """
+            MATCH (n)-[r]->(m)
+            WHERE (n.name IS NOT NULL AND toLower(n.name) CONTAINS toLower($search_query)) 
+               OR (m.name IS NOT NULL AND toLower(m.name) CONTAINS toLower($search_query))
+            RETURN n, r, m
+            LIMIT 100
+            """
+            try:
+                result = session.run(cypher_query, search_query=query)
+            except Exception as e:
+                print(f"Error with query search: {e}")
+                # Fallback to basic query
+                result = session.run("MATCH (n)-[r]->(m) RETURN n, r, m LIMIT 50")
+        elif filter_type:
+            cypher_query = f"MATCH (n:{filter_type})-[r]->(m) RETURN n, r, m LIMIT 50"
+            result = session.run(cypher_query)
         else:
+            # Default: get a sample of all relationships
             result = session.run("MATCH (n)-[r]->(m) RETURN n, r, m LIMIT 50")
         
         nodes = set()
@@ -269,15 +304,20 @@ def get_graph(filter_type: str = None):
             rel_type = record["r"].type
             
             # Add nodes to set (to avoid duplicates)
-            nodes.add((from_node.get("name", "unknown"), from_node.get("labels", ["Unknown"])[0] if "labels" in from_node else "Unknown"))
-            nodes.add((to_node.get("name", "unknown"), to_node.get("labels", ["Unknown"])[0] if "labels" in to_node else "Unknown"))
+            from_name = from_node.get("name", "unknown")
+            to_name = to_node.get("name", "unknown")
+            from_type = from_node.get("labels", ["Unknown"])[0] if "labels" in from_node else "Unknown"
+            to_type = to_node.get("labels", ["Unknown"])[0] if "labels" in to_node else "Unknown"
+            
+            nodes.add((from_name, from_type))
+            nodes.add((to_name, to_type))
             
             # Add edge
             edges.append({
                 "data": {
-                    "id": f"{from_node.get('name', 'unknown')}-{to_node.get('name', 'unknown')}",
-                    "source": from_node.get("name", "unknown"),
-                    "target": to_node.get("name", "unknown"),
+                    "id": f"{from_name}-{to_name}",
+                    "source": from_name,
+                    "target": to_name,
                     "label": rel_type
                 }
             })
@@ -295,5 +335,8 @@ def get_graph(filter_type: str = None):
         
         return {
             "nodes": nodes_list,
-            "edges": edges
+            "edges": edges,
+            "query": query,
+            "total_nodes": len(nodes_list),
+            "total_edges": len(edges)
         }

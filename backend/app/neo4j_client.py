@@ -16,10 +16,14 @@ NEO4J_PASSWORD = os.getenv("NEO4J_PASSWORD", "")
 if NEO4J_URI and NEO4J_PASSWORD:
     try:
         driver = GraphDatabase.driver(NEO4J_URI, auth=(NEO4J_USER, NEO4J_PASSWORD))
-        print(f"✅ Neo4j driver initialized successfully")
+        print(f"SUCCESS: Neo4j driver initialized successfully")
     except Exception as e:
-        print(f"❌ Failed to initialize Neo4j driver: {e}")
+        print(f"ERROR: Failed to initialize Neo4j driver: {e}")
         driver = None
 else:
-    print("⚠️ Neo4j environment variables not set. Graph features will be disabled.")
+    print("WARNING: Neo4j environment variables not set. Graph features will be disabled.")
     driver = None
+
+def get_driver():
+    """Get the Neo4j driver instance"""
+    return driver

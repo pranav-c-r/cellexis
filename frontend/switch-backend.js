@@ -53,7 +53,7 @@ export default config;`;
     configContent = `// Configuration for different environments
 export const config = {
   // API Configuration - HOSTED BACKEND
-  API_BASE_URL: import.meta.env.VITE_API_URL || 'https://cellexis.onrender.com',
+  API_BASE_URL: import.meta.env.VITE_API_URL || 'https://cellexis-wlgs.onrender.com',
   
   // Environment detection
   isDevelopment: import.meta.env.DEV,
@@ -88,7 +88,7 @@ export const config = {
 };
 
 export default config;`;
-    console.log('🔄 Switched to HOSTED backend (https://cellexis.onrender.com)');
+    console.log('🔄 Switched to HOSTED backend (https://cellexis-wlgs.onrender.com)');
   }
   
   try {
@@ -109,5 +109,5 @@ if (backendType === 'local' || backendType === 'hosted') {
 } else {
   console.log('Usage: node switch-backend.js [local|hosted]');
   console.log('  local  - Use http://localhost:8000');
-  console.log('  hosted - Use https://cellexis.onrender.com');
+  console.log('  hosted - Use https://cellexis-wlgs.onrender.com');
 }

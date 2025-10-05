@@ -15,7 +15,7 @@
     "build": "vite build",
     "build:client": "vite build",
     "build:server": "vite build --config vite.config.server.ts",
-    "build:production": "VITE_API_URL=https://cellexis.onrender.com pnpm build",
+    "build:production": "VITE_API_URL=https://cellexis-wlgs.onrender.com pnpm build",
     "start": "node dist/server/node-build.mjs",
     "test": "vitest --run",
     "test:integration": "node test-integration.js",

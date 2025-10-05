@@ -1,7 +1,7 @@
 // Backend Wake-up Utility
 // This script helps wake up the sleeping Render backend
 
-const BACKEND_URL = 'https://cellexis.onrender.com';
+const BACKEND_URL = 'https://cellexis-wlgs.onrender.com';
 
 async function wakeUpBackend() {
   console.log('🔄 Attempting to wake up backend...');

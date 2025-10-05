@@ -1,7 +1,7 @@
 // CORS Test Script
 // This script tests CORS configuration for the backend
 
-const BACKEND_URL = 'https://cellexis.onrender.com';
+const BACKEND_URL = 'https://cellexis-wlgs.onrender.com';
 
 async function testCORS() {
   console.log('🧪 Testing CORS Configuration...\n');

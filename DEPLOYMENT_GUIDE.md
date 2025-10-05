@@ -2,14 +2,14 @@
 
 ## 🚀 Frontend-Backend Integration Complete
 
-Your frontend has been successfully configured to work with the hosted backend at `https://cellexis.onrender.com`.
+Your frontend has been successfully configured to work with the hosted backend at `https://cellexis-wlgs.onrender.com`.
 
 ## 📋 What's Been Updated
 
 ### 1. API Configuration
 - ✅ Updated `frontend/client/lib/api.ts` to use hosted backend URL
 - ✅ Created `frontend/client/lib/config.ts` for environment-based configuration
-- ✅ All API endpoints now point to `https://cellexis.onrender.com`
+- ✅ All API endpoints now point to `https://cellexis-wlgs.onrender.com`
 
 ### 2. Environment Setup
 - ✅ Created deployment configuration files
@@ -38,9 +38,9 @@ This will test:
 ```bash
 cd frontend
 # Set environment variable
-export VITE_API_URL=https://cellexis.onrender.com
+export VITE_API_URL=https://cellexis-wlgs.onrender.com
 # or on Windows:
-# set VITE_API_URL=https://cellexis.onrender.com
+# set VITE_API_URL=https://cellexis-wlgs.onrender.com
 
 # Start development server
 pnpm dev
@@ -60,7 +60,7 @@ pnpm run build:production
 3. Add these variables:
 
 ```
-VITE_API_URL = https://cellexis.onrender.com
+VITE_API_URL = https://cellexis-wlgs.onrender.com
 VITE_GEMINI_API_KEY = your_gemini_api_key_here (optional)
 ```
 
@@ -120,10 +120,10 @@ The backend should already have CORS configured, but if you encounter issues:
 5. **Voice commands** work (if Gemini API key is set)
 
 ### API Endpoints Being Used:
-- `https://cellexis.onrender.com/search-rag` - Main search
-- `https://cellexis.onrender.com/graph` - Knowledge graph
-- `https://cellexis.onrender.com/search-stats` - System statistics
-- `https://cellexis.onrender.com/` - Health check
+- `https://cellexis-wlgs.onrender.com/search-rag` - Main search
+- `https://cellexis-wlgs.onrender.com/graph` - Knowledge graph
+- `https://cellexis-wlgs.onrender.com/search-stats` - System statistics
+- `https://cellexis-wlgs.onrender.com/` - Health check
 
 ## 🚀 Quick Start Commands
 

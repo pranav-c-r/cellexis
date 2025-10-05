@@ -1,7 +1,7 @@
 // Integration Test Script for Cellexis Frontend-Backend
 // Run this script to test the connection between frontend and hosted backend
 
-const API_BASE_URL = 'https://cellexis.onrender.com';
+const API_BASE_URL = 'https://cellexis-wlgs.onrender.com';
 
 async function testBackendConnection() {
   console.log('🧪 Testing Cellexis Backend Integration...\n');

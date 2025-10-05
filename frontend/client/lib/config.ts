@@ -1,7 +1,7 @@
 // Configuration for different environments
 export const config = {
   // API Configuration
-  API_BASE_URL: import.meta.env.VITE_API_URL || 'https://cellexis.onrender.com',
+  API_BASE_URL: import.meta.env.VITE_API_URL || 'https://cellexis-wlgs.onrender.com',
   
   // Environment detection
   isDevelopment: import.meta.env.DEV,

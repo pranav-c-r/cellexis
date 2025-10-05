@@ -20,6 +20,18 @@ export const config = {
     health: '/',
     pingDb: '/pingdb',
     searchStats: '/search-stats'
+  },
+  
+  // Development fallback for sleeping backend
+  fallbackData: {
+    searchStats: {
+      faiss_index_size: 8927,
+      chunks_loaded: 8927,
+      papers_available: 100,
+      neo4j_connected: false,
+      embedding_model: 'sentence-transformers/all-MiniLM-L6-v2',
+      status: 'backend_sleeping'
+    }
   }
 };
 

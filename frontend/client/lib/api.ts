@@ -192,14 +192,7 @@ class ApiService {
         if (response.status === 502) {
           console.warn('Backend appears to be sleeping. Retrying in 5 seconds...');
           // Return mock data when backend is sleeping
-          return {
-            faiss_index_size: 8927,
-            chunks_loaded: 8927,
-            papers_available: 100,
-            neo4j_connected: false,
-            embedding_model: 'sentence-transformers/all-MiniLM-L6-v2',
-            status: 'backend_sleeping'
-          };
+          return config.fallbackData.searchStats;
         }
         throw new Error(`HTTP error! status: ${response.status}`);
       }
@@ -207,14 +200,7 @@ class ApiService {
     } catch (error) {
       console.error('Error fetching search stats:', error);
       // Return fallback data when backend is unavailable
-      return {
-        faiss_index_size: 8927,
-        chunks_loaded: 8927,
-        papers_available: 100,
-        neo4j_connected: false,
-        embedding_model: 'sentence-transformers/all-MiniLM-L6-v2',
-        status: 'backend_unavailable'
-      };
+      return config.fallbackData.searchStats;
     }
   }
 

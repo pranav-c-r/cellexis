@@ -150,6 +150,97 @@ class ApiService {
       return false;
     }
   }
+
+  // Enhanced Voice Assistant with Gemini Integration
+  async processVoiceQuery(query: string): Promise<string> {
+    try {
+      console.log('🎤 Processing voice query:', query);
+      
+      // Step 1: Get results from your existing API
+      const ragResults = await this.searchRAG(query, 3);
+      
+      // Step 2: Prepare context for Gemini
+      const context = {
+        original_query: query,
+        api_response: ragResults,
+        citations: ragResults.citations,
+        answer_summary: ragResults.answer
+      };
+
+      // Step 3: Call Gemini for elaboration
+      const elaboratedResponse = await this.callGeminiForElaboration(context);
+      
+      return elaboratedResponse;
+    } catch (error) {
+      console.error('❌ Error in voice query processing:', error);
+      return `I encountered an error while processing your question about "${query}". Please try asking again.`;
+    }
+  }
+
+  // Gemini API Integration
+  private async callGeminiForElaboration(context: any): Promise<string> {
+    try {
+      // Use Google Gemini API (you'll need to add your API key)
+      const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY || 'your-gemini-api-key';
+      const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${GEMINI_API_KEY}`;
+
+      const prompt = `
+You are Cellexis, an intelligent voice assistant for NASA's bioscience research knowledge graph. 
+
+The user asked: "${context.original_query}"
+
+Our database search returned this information:
+- Answer: ${context.answer_summary}
+- Number of citations: ${context.citations?.length || 0}
+- Retrieved chunks: ${context.api_response.chunks_used || 0}
+
+Please provide a natural, conversational response that:
+1. Directly answers the user's question
+2. Elaborates on the key findings with scientific context
+3. Mentions relevant research connections if applicable
+4. Keeps the response concise but informative (2-3 sentences max for voice)
+5. Uses a friendly, helpful tone suitable for voice interaction
+
+Focus on making complex scientific information accessible and engaging for voice delivery.
+`;
+
+      const response = await fetch(GEMINI_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          contents: [{
+            parts: [{
+              text: prompt
+            }]
+          }],
+          generationConfig: {
+            temperature: 0.7,
+            topK: 40,
+            topP: 0.95,
+            maxOutputTokens: 200,
+          }
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`Gemini API error: ${response.status}`);
+      }
+
+      const data = await response.json();
+      const elaboratedText = data.candidates?.[0]?.content?.parts?.[0]?.text || 
+                           "I found some relevant information, but couldn't elaborate on it right now.";
+      
+      console.log('✅ Gemini elaboration successful');
+      return elaboratedText;
+      
+    } catch (error) {
+      console.error('❌ Gemini API error:', error);
+      // Fallback to basic response
+      return `Based on our research database: ${context.answer_summary}`;
+    }
+  }
 }
 
 // Export singleton instance

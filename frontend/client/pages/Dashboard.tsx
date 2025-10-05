@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import {useAuth} from "@/contexts/AuthContext"
+import { useAuth } from "@/contexts/AuthContext"
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -94,7 +94,7 @@ export default function Dashboard() {
   const [isVoiceActive, setIsVoiceActive] = useState(false);
   const [transcript, setTranscript] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
-  
+
   // Search functionality state
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<RAGResponse | null>(null);
@@ -102,9 +102,9 @@ export default function Dashboard() {
   const [graphData, setGraphData] = useState<GraphResponse | null>(null);
   const [isLoadingGraph, setIsLoadingGraph] = useState(false);
   const [isGraphFullscreen, setIsGraphFullscreen] = useState(false);
-  
+
   const navigate = useNavigate();
-  const {user,signOut} = useAuth();
+  const { user, signOut } = useAuth();
   const recognitionRef = useRef<any>(null);
   const silenceTimerRef = useRef<NodeJS.Timeout>();
   const graphRef = useRef<HTMLDivElement>(null);
@@ -115,7 +115,7 @@ export default function Dashboard() {
   // Search functions
   const handleSearch = async () => {
     if (!searchQuery.trim()) return;
-    
+
     console.log('🚀 Starting search with query:', searchQuery);
     setIsSearching(true);
     try {
@@ -123,7 +123,7 @@ export default function Dashboard() {
       const results = await apiService.searchRAG(searchQuery, 5);
       console.log('📊 Search results received:', results);
       setSearchResults(results);
-      
+
       // Load graph data after search
       console.log('📊 Loading graph data...');
       await loadGraphData();
@@ -141,6 +141,48 @@ export default function Dashboard() {
     }
   };
 
+  // Enhanced search with Gemini for QA tab
+  const handleEnhancedSearch = async () => {
+    if (!searchQuery.trim()) return;
+
+    console.log('🚀 Starting enhanced search with query:', searchQuery);
+    setIsSearching(true);
+    try {
+      console.log('📞 Calling enhanced voice query processor...');
+      const elaboratedResponse = await apiService.processVoiceQuery(searchQuery);
+
+      // Set enhanced results
+      setSearchResults({
+        query: searchQuery,
+        answer: elaboratedResponse,
+        citations: [],
+        chunks_used: 1,
+        retrieved_chunks: [{
+          score: 1.0,
+          paper_id: "gemini_enhanced",
+          chunk_id: "enhanced_response",
+          text: elaboratedResponse,
+          page_num: 1
+        }]
+      });
+
+      // Load graph data after search
+      console.log('📊 Loading graph data...');
+      await loadGraphData();
+    } catch (error) {
+      console.error('❌ Enhanced search error:', error);
+      setSearchResults({
+        query: searchQuery,
+        answer: "Error performing enhanced search. Please try again.",
+        citations: [],
+        chunks_used: 0
+      });
+    } finally {
+      console.log('✅ Enhanced search completed, setting isSearching to false');
+      setIsSearching(false);
+    }
+  };
+
   const loadGraphData = async () => {
     console.log('📊 Starting to load graph data...');
     setIsLoadingGraph(true);
@@ -148,7 +190,7 @@ export default function Dashboard() {
       const graph = await apiService.getGraph();
       console.log('📊 Graph data received:', graph);
       setGraphData(graph);
-      
+
       // Render the graph after data is loaded
       if (graph && graph.nodes.length > 0) {
         setTimeout(() => renderGraph(graph), 100);
@@ -178,7 +220,7 @@ export default function Dashboard() {
   const renderGraph = (data: GraphResponse, isFullscreen = false) => {
     const container = isFullscreen ? fullscreenGraphRef.current : graphRef.current;
     const cytoscapeInstance = isFullscreen ? fullscreenCytoscapeRef : cytoscapeRef;
-    
+
     if (!container || !window.cytoscape) {
       console.log('📊 Graph container or Cytoscape not available');
       return;
@@ -213,6 +255,7 @@ export default function Dashboard() {
           {
             selector: 'node',
             style: {
+              'shape': 'roundrectangle', // Changed from default 'ellipse' to 'roundrectangle'
               'background-color': '#3b82f6',
               'label': 'data(label)',
               'text-valign': 'center',
@@ -222,8 +265,8 @@ export default function Dashboard() {
               'color': '#ffffff',
               'text-outline-width': 1,
               'text-outline-color': '#1e40af',
-              'width': isFullscreen ? '40px' : '20px',
-              'height': isFullscreen ? '40px' : '20px',
+              'width': isFullscreen ? '80px' : '40px',
+              'height': isFullscreen ? '80px' : '40px',
               'border-width': 2,
               'border-color': '#1e40af',
               'text-wrap': 'wrap',
@@ -240,11 +283,10 @@ export default function Dashboard() {
               'target-arrow-size': isFullscreen ? 12 : 8,
               'curve-style': 'bezier',
               'label': 'data(label)',
-              'font-size': isFullscreen ? '12px' : '6px',
+              'font': 'bold 12px Arial, sans-serif',
+              'font-size': isFullscreen ? '8px' : '6px',
               'font-weight': 'bold',
-              'color': '#374151',
-              'text-outline-width': 1,
-              'text-outline-color': '#ffffff',
+              'color': 'white',
               'text-rotation': 'autorotate',
               'text-margin-y': isFullscreen ? -15 : -10
             }
@@ -284,7 +326,7 @@ export default function Dashboard() {
 
     try {
       const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-      
+
       if (!SpeechRecognition) {
         console.warn('Speech Recognition API not supported in this browser');
         return null;
@@ -304,12 +346,12 @@ export default function Dashboard() {
   };
 
   // Process voice commands
-  const processVoiceCommand = (command: string) => {
+  const processVoiceCommand = async (command: string) => {
     if (isProcessing) return;
-    
+
     setIsProcessing(true);
     const cleanCommand = command.toLowerCase().trim();
-    
+
     console.log('Processing command:', cleanCommand);
 
     // Check for navigation commands
@@ -348,12 +390,81 @@ export default function Dashboard() {
       return;
     }
 
-    // If no command matched but we're active, provide feedback
+    // Enhanced: Process research questions with voice assistant
     if (isVoiceActive && cleanCommand.length > 3) {
-      speak("Command not recognized. Try saying 'go to search' or 'logout'");
+      // Check if it's a research question (not a command)
+      const isResearchQuestion = !Object.keys(VOICE_COMMANDS.navigation).some(cmd => cleanCommand.includes(cmd)) &&
+        !Object.keys(VOICE_COMMANDS.actions).some(cmd => cleanCommand.includes(cmd));
+
+      if (isResearchQuestion) {
+        await handleVoiceResearchQuery(cleanCommand);
+        resetProcessing();
+        return;
+      }
+
+      // Fallback for unrecognized commands
+      speak("Command not recognized. Try saying 'go to search' or ask me a research question about space biology.");
     }
 
     resetProcessing();
+  };
+
+  // New: Handle research queries through voice assistant
+  const handleVoiceResearchQuery = async (query: string) => {
+    try {
+      // Provide immediate feedback
+      speak("Let me search our knowledge base for that information.");
+
+      // Visual feedback
+      setSearchQuery(query);
+      setIsSearching(true);
+
+      // Call the enhanced voice query processor
+      const elaboratedResponse = await apiService.processVoiceQuery(query);
+
+      // Also get graph data for visual representation
+      try {
+        const graphResults = await apiService.getGraph();
+        setGraphData(graphResults);
+        if (graphResults && graphResults.nodes.length > 0) {
+          renderGraph(graphResults);
+        }
+      } catch (graphError) {
+        console.warn('Graph data unavailable:', graphError);
+      }
+
+      // Set search results in the correct format
+      setSearchResults({
+        query: query,
+        answer: elaboratedResponse,
+        citations: [],
+        chunks_used: 1,
+        retrieved_chunks: [{
+          score: 1.0,
+          paper_id: "voice_query",
+          chunk_id: "voice_response",
+          text: elaboratedResponse,
+          page_num: 1
+        }]
+      });
+
+      // Speak the elaborated response
+      speak(elaboratedResponse);
+
+    } catch (error) {
+      console.error('❌ Voice research query error:', error);
+      const errorMessage = "I'm sorry, I encountered an issue while searching for that information. Please try again.";
+      speak(errorMessage);
+
+      setSearchResults({
+        query: query,
+        answer: errorMessage,
+        citations: [],
+        chunks_used: 0
+      });
+    } finally {
+      setIsSearching(false);
+    }
   };
 
   const executeAction = (action: string) => {
@@ -399,16 +510,16 @@ export default function Dashboard() {
     if ('speechSynthesis' in window) {
       // Cancel any ongoing speech
       speechSynthesis.cancel();
-      
+
       const utterance = new SpeechSynthesisUtterance(text);
       utterance.rate = 0.9;
       utterance.pitch = 1;
       utterance.volume = 0.8;
-      
+
       utterance.onend = () => {
         console.log('Finished speaking:', text);
       };
-      
+
       speechSynthesis.speak(utterance);
     }
   };
@@ -416,7 +527,7 @@ export default function Dashboard() {
   const activateVoiceAssistant = () => {
     if (!recognitionRef.current) {
       recognitionRef.current = initializeSpeechRecognition();
-      
+
       if (!recognitionRef.current) {
         alert('Speech recognition is not supported in your browser. Please use Chrome or Edge.');
         return;
@@ -425,7 +536,7 @@ export default function Dashboard() {
       // Set up event handlers
       recognitionRef.current.onresult = (event: any) => {
         let finalTranscript = '';
-        
+
         for (let i = event.resultIndex; i < event.results.length; i++) {
           if (event.results[i].isFinal) {
             finalTranscript += event.results[i][0].transcript;
@@ -441,7 +552,7 @@ export default function Dashboard() {
 
       recognitionRef.current.onerror = (event: any) => {
         console.error('Speech recognition error:', event.error);
-        
+
         if (event.error === 'not-allowed') {
           alert('Microphone access denied. Please allow microphone access to use voice commands.');
           deactivateVoiceAssistant();
@@ -469,7 +580,7 @@ export default function Dashboard() {
 
     setIsVoiceActive(true);
     setIsListening(true);
-    
+
     try {
       recognitionRef.current.start();
       speak("Voice assistant activated. How can I help you?");
@@ -487,7 +598,7 @@ export default function Dashboard() {
     setIsListening(false);
     setIsVoiceActive(false);
     setTranscript("");
-    
+
     if (recognitionRef.current) {
       try {
         recognitionRef.current.stop();
@@ -495,7 +606,7 @@ export default function Dashboard() {
         console.error('Error stopping recognition:', error);
       }
     }
-    
+
     speak("Voice assistant deactivated");
   };
 
@@ -513,14 +624,14 @@ export default function Dashboard() {
       if ((event.ctrlKey || event.metaKey) && event.code === 'Space') {
         event.preventDefault();
         event.stopPropagation();
-        
+
         if (isVoiceActive) {
           deactivateVoiceAssistant();
         } else {
           activateVoiceAssistant();
         }
       }
-      
+
       if (event.code === 'Escape' && isVoiceActive) {
         event.preventDefault();
         deactivateVoiceAssistant();
@@ -729,13 +840,13 @@ export default function Dashboard() {
               <div className="glass rounded-xl p-4">
                 <h3 className="font-semibold mb-2">Search Papers</h3>
                 <div className="flex gap-2">
-                  <Input 
-                    placeholder="Search across NASA bioscience publications..." 
+                  <Input
+                    placeholder="Search across NASA bioscience publications..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
                   />
-                  <Button 
+                  <Button
                     onClick={handleSearch}
                     disabled={isSearching || !searchQuery.trim()}
                     className="bg-gradient-to-r from-primary via-accent to-secondary text-black"
@@ -744,7 +855,7 @@ export default function Dashboard() {
                   </Button>
                 </div>
               </div>
-              
+
               {/* Search Results */}
               <div className="glass rounded-xl p-4">
                 <h3 className="font-semibold mb-4">Search Results</h3>
@@ -761,7 +872,7 @@ export default function Dashboard() {
                         {searchResults.answer}
                       </p>
                     </div>
-                    
+
                     {searchResults.citations && searchResults.citations.length > 0 ? (
                       <div>
                         <h4 className="font-medium mb-2">Citations:</h4>
@@ -783,7 +894,7 @@ export default function Dashboard() {
                         No citations available
                       </div>
                     )}
-                    
+
                     <div className="text-xs text-foreground/60">
                       Based on {searchResults.chunks_used} relevant chunks from NASA publications
                     </div>
@@ -830,8 +941,8 @@ export default function Dashboard() {
                       <div className="absolute top-2 left-2 text-xs text-foreground/60 z-10">
                         Nodes: {graphData.nodes.length} | Edges: {graphData.edges.length}
                       </div>
-                      <div 
-                        ref={graphRef} 
+                      <div
+                        ref={graphRef}
                         className="w-full h-full"
                         style={{ minHeight: '300px' }}
                       />
@@ -867,63 +978,91 @@ export default function Dashboard() {
           <div className="grid grid-cols-12 gap-4 md:gap-6">
             <main className="col-span-12 grid gap-4">
               <div className="glass rounded-xl p-4">
-                <h3 className="font-semibold mb-2">Ask a question</h3>
+                <h3 className="font-semibold mb-2">Ask a Question</h3>
+                <div className="text-xs text-foreground/60 mb-3">
+                  Answer
+                </div>
                 <div className="flex gap-2">
-                  <Input 
-                    placeholder="e.g., How does microgravity affect immune response?" 
+                  <Input
+                    placeholder="e.g., How does microgravity affect immune response?"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
+                    onKeyPress={(e) => e.key === 'Enter' && handleEnhancedSearch()}
                   />
-                  <Button 
-                    onClick={handleSearch}
+                  <Button
+                    onClick={handleEnhancedSearch}
                     disabled={isSearching || !searchQuery.trim()}
-                    className="bg-gradient-to-r from-primary via-accent to-secondary text-black"
+                    className="bg-gradient-to-r from-green-500 via-emerald-500 to-teal-500 text-white hover:from-green-600 hover:via-emerald-600 hover:to-teal-600"
                   >
-                    {isSearching ? <Loader2 className="h-4 w-4 animate-spin" /> : "Ask"}
+                    {isSearching ? <Loader2 className="h-4 w-4 animate-spin" /> : "Search"}
                   </Button>
                 </div>
               </div>
               <div className="glass rounded-xl p-4">
-                <h3 className="font-semibold">Answer</h3>
+                <div className="flex items-center gap-2 mb-4">
+                  
+                </div>
                 {isSearching ? (
                   <div className="flex items-center justify-center py-8">
                     <Loader2 className="h-6 w-6 animate-spin mr-2" />
-                    <span>Searching NASA publications...</span>
+                    <span>Analyzing NASA publications and generating enhanced response...</span>
                   </div>
                 ) : searchResults ? (
                   <div className="space-y-4">
-                    <div className="p-4 bg-muted/20 rounded-lg">
-                      <p className="text-sm text-foreground/80 whitespace-pre-wrap">
+                    <div className="p-4 bg-gradient-to-r from-green-50/50 to-emerald-50/50 dark:from-green-950/30 dark:to-emerald-950/30 rounded-lg border border-green-200/30">
+                      <div className="flex items-center gap-2 mb-2">
+                        <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                        <span className="text-sm font-medium text-green-700 dark:text-green-300">Enhanced Response:</span>
+                      </div>
+                      <p className="text-sm text-foreground/90 whitespace-pre-wrap leading-relaxed">
                         {searchResults.answer}
                       </p>
                     </div>
-                    
-                    {searchResults.citations.length > 0 && (
+
+                    {searchResults.citations && searchResults.citations.length > 0 && (
                       <div className="mt-4 text-xs text-foreground/60">
                         Citations: {searchResults.citations.map(c => `${c.paper_id} p.${c.page_num}`).join(', ')}
                       </div>
                     )}
-                    
+
                     {searchResults.retrieved_chunks && (
                       <details className="mt-3">
-                        <summary className="cursor-pointer text-sm text-foreground/80">
-                          Retrieved snippets ({searchResults.chunks_used})
+                        <summary className="cursor-pointer text-sm text-foreground/80 hover:text-foreground">
+                          📊 Source Information ({searchResults.chunks_used} chunks processed)
                         </summary>
-                        <ul className="mt-2 list-disc pl-5 text-sm text-foreground/70 space-y-1">
-                          {searchResults.retrieved_chunks.slice(0, 3).map((chunk, index) => (
-                            <li key={index}>
-                              "{chunk.text.substring(0, 100)}..."
-                            </li>
-                          ))}
-                        </ul>
+                        <div className="mt-2 p-3 bg-background/50 rounded border border-border/50">
+                          <div className="text-xs text-foreground/70 mb-2">
+                            AI processed the following information from NASA databases:
+                          </div>
+                          <ul className="list-disc pl-5 text-sm text-foreground/70 space-y-1">
+                            {searchResults.retrieved_chunks.slice(0, 3).map((chunk, index) => (
+                              <li key={index}>
+                                "{chunk.text.substring(0, 150)}..."
+                                <div className="text-xs text-foreground/50 mt-1">
+                                  Source: {chunk.paper_id} | Relevance: {(chunk.score * 100).toFixed(1)}%
+                                </div>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
                       </details>
                     )}
+
+                    <div className="flex items-center gap-2 text-xs text-foreground/60 bg-background/30 p-2 rounded">
+                      <div className="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
+                      <span>Response enhanced by  AI for better context and scientific accuracy</span>
+                    </div>
                   </div>
                 ) : (
-                  <p className="mt-2 text-sm text-foreground/80">
-                    Ask a question about NASA bioscience research to get AI-powered answers.
-                  </p>
+                  <div className="text-center py-8">
+                    <div className="text-4xl mb-4">🤖</div>
+                    <p className="text-sm text-foreground/80 mb-2">
+                      Ask a question about NASA bioscience research to get enhanced answers.
+                    </p>
+                    <div className="text-xs text-foreground/60">
+                      Our AI will search the knowledge base and provide detailed, contextual responses.
+                    </div>
+                  </div>
                 )}
               </div>
             </main>
@@ -949,15 +1088,14 @@ export default function Dashboard() {
               </div>
             </div>
           )}
-          
+
           {/* Voice Assistant Button */}
           <Button
             onClick={toggleVoiceAssistant}
-            className={`rounded-full w-14 h-14 shadow-lg transition-all duration-300 ${
-              isVoiceActive 
-                ? 'bg-gradient-to-r from-green-500 to-emerald-600 text-white ring-2 ring-green-300' 
+            className={`rounded-full w-14 h-14 shadow-lg transition-all duration-300 ${isVoiceActive
+                ? 'bg-gradient-to-r from-green-500 to-emerald-600 text-white ring-2 ring-green-300'
                 : 'bg-gradient-to-r from-primary via-accent to-secondary text-black hover:scale-105'
-            }`}
+              }`}
             size="icon"
           >
             {isVoiceActive ? (
@@ -976,20 +1114,20 @@ export default function Dashboard() {
               <div className="flex items-center gap-2">
                 <div className="flex space-x-1">
                   <div className="w-1 h-3 bg-green-500 rounded-full animate-pulse"></div>
-                  <div className="w-1 h-3 bg-green-500 rounded-full animate-pulse" style={{animationDelay: '0.2s'}}></div>
-                  <div className="w-1 h-3 bg-green-500 rounded-full animate-pulse" style={{animationDelay: '0.4s'}}></div>
+                  <div className="w-1 h-3 bg-green-500 rounded-full animate-pulse" style={{ animationDelay: '0.2s' }}></div>
+                  <div className="w-1 h-3 bg-green-500 rounded-full animate-pulse" style={{ animationDelay: '0.4s' }}></div>
                 </div>
                 <span className="text-xs text-green-600">Listening</span>
               </div>
             </div>
-            
+
             {transcript && (
               <div className="mt-2 p-2 bg-background/50 rounded text-sm border border-green-200/30">
                 <div className="text-xs text-foreground/60 mb-1">Heard:</div>
                 <div className="font-medium text-green-700">{transcript}</div>
               </div>
             )}
-            
+
             <div className="mt-3 text-xs text-foreground/70">
               <div className="font-medium mb-1">Try saying:</div>
               <ul className="space-y-1">
@@ -999,7 +1137,7 @@ export default function Dashboard() {
                 <li>"Stop listening" to deactivate</li>
               </ul>
             </div>
-            
+
             <div className="mt-3 text-xs text-foreground/50 flex gap-4">
               <span>Press Ctrl+Space to toggle</span>
               <span>Press ESC to deactivate</span>
@@ -1078,8 +1216,8 @@ export default function Dashboard() {
                 <span>Loading graph...</span>
               </div>
             ) : graphData ? (
-              <div 
-                ref={fullscreenGraphRef} 
+              <div
+                ref={fullscreenGraphRef}
                 className="w-full h-full"
                 style={{ minHeight: 'calc(100vh - 4rem)' }}
               />

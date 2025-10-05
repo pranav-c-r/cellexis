@@ -1,5 +1,7 @@
 // API service for backend integration
-const API_BASE_URL = 'http://localhost:8000';
+import config from './config';
+
+const API_BASE_URL = config.API_BASE_URL;
 
 export interface RAGResponse {
   query: string;
@@ -63,9 +65,9 @@ class ApiService {
   // RAG Search - Main functionality
   async searchRAG(query: string, topK: number = 5): Promise<RAGResponse> {
     try {
-      console.log('🔍 Making RAG search request:', { query, topK, url: `${this.baseUrl}/search-rag` });
+      console.log('🔍 Making RAG search request:', { query, topK, url: `${this.baseUrl}${config.endpoints.search}` });
       
-      const response = await fetch(`${this.baseUrl}/search-rag`, {
+      const response = await fetch(`${this.baseUrl}${config.endpoints.search}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -97,7 +99,7 @@ class ApiService {
   // Get Knowledge Graph data
   async getGraph(filterType?: string, query?: string): Promise<GraphResponse> {
     try {
-      let url = `${this.baseUrl}/graph`;
+      let url = `${this.baseUrl}${config.endpoints.graph}`;
       const params = new URLSearchParams();
       
       if (filterType) {
@@ -133,7 +135,7 @@ class ApiService {
   // Search nodes in Neo4j
   async searchNodes(query: string): Promise<SearchResponse> {
     try {
-      const response = await fetch(`${this.baseUrl}/search?q=${encodeURIComponent(query)}`);
+      const response = await fetch(`${this.baseUrl}${config.endpoints.searchNodes}?q=${encodeURIComponent(query)}`);
       
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -150,7 +152,7 @@ class ApiService {
   // Health check
   async healthCheck(): Promise<boolean> {
     try {
-      const response = await fetch(`${this.baseUrl}/`);
+      const response = await fetch(`${this.baseUrl}${config.endpoints.health}`);
       return response.ok;
     } catch (error) {
       console.error('Backend health check failed:', error);
@@ -161,7 +163,7 @@ class ApiService {
   // Database ping
   async pingDatabase(): Promise<boolean> {
     try {
-      const response = await fetch(`${this.baseUrl}/pingdb`);
+      const response = await fetch(`${this.baseUrl}${config.endpoints.pingDb}`);
       return response.ok;
     } catch (error) {
       console.error('Database ping failed:', error);
@@ -172,7 +174,7 @@ class ApiService {
   // Get search system statistics
   async getSearchStats(): Promise<any> {
     try {
-      const response = await fetch(`${this.baseUrl}/search-stats`);
+      const response = await fetch(`${this.baseUrl}${config.endpoints.searchStats}`);
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }

@@ -19,6 +19,7 @@
     "start": "node dist/server/node-build.mjs",
     "test": "vitest --run",
     "test:integration": "node test-integration.js",
+    "wake-backend": "node wake-backend.js",
     "format.fix": "prettier --write .",
     "typecheck": "tsc",
     "preview": "vite preview"

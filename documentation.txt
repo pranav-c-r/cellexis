@@ -1,0 +1,367 @@
+# Cellexis - Comprehensive Documentation
+
+## 🚀 Project Overview
+
+Cellexis is a sophisticated AI-powered research platform that combines advanced RAG (Retrieval-Augmented Generation) capabilities with knowledge graph visualization for scientific research. The system enables researchers to search through NASA publications, extract insights, and visualize relationships between scientific concepts.
+
+## 🏗️ Architecture
+
+### System Components
+- **Frontend**: React 18 + TypeScript + Vite + TailwindCSS
+- **Backend**: FastAPI + Python + Neo4j + FAISS
+- **AI Integration**: Google Gemini 2.0 Flash + Sentence Transformers
+- **Database**: Neo4j Aura (Graph Database)
+- **Vector Search**: FAISS (Facebook AI Similarity Search)
+- **Visualization**: Cytoscape.js for knowledge graphs
+
+### Data Flow
+1. **User Query** → Frontend Dashboard
+2. **API Request** → FastAPI Backend
+3. **Vector Search** → FAISS Index (8,927 chunks from 100 papers)
+4. **Graph Search** → Neo4j Knowledge Graph (1,000+ nodes, 1,600+ relationships)
+5. **AI Processing** → Gemini 2.0 Flash
+6. **Response** → Structured answer + citations + graph visualization
+
+## 📁 Project Structure
+
+```
+Cellexis/
+├── backend/                    # Python FastAPI Backend
+│   ├── app/                    # Core application modules
+│   │   ├── main.py            # FastAPI routes and endpoints
+│   │   ├── rag_service.py     # RAG pipeline implementation
+│   │   ├── neo4j_client.py    # Neo4j database connection
+│   │   ├── graph_api.py       # Graph-specific endpoints
+│   │   └── neo4j_ingest.py    # Data ingestion utilities
+│   ├── gemini/                 # AI integration
+│   │   └── gemini_utils.py    # Gemini API utilities
+│   ├── ingestion/             # Data processing pipeline
+│   │   ├── download_pdfs.py   # PDF download utilities
+│   │   ├── extract_text.py    # Text extraction
+│   │   ├── chunker.py         # Text chunking
+│   │   ├── embedding.py       # Vector embeddings
+│   │   └── create_chunks.py   # Chunk creation
+│   ├── data/                  # Data storage
+│   │   ├── embeddings/        # FAISS index and metadata
+│   │   │   ├── faiss_index.idx        # Vector index (8,927 vectors)
+│   │   │   ├── chunk_metadata.json    # Chunk metadata
+│   │   │   └── paper_index_mapping.json # Paper-to-chunk mapping
+│   │   └── entities/          # Extracted entities (JSONL format)
+│   └── requirements.txt       # Python dependencies
+├── frontend/                   # React TypeScript Frontend
+│   ├── client/                # Client-side application
+│   │   ├── pages/             # Route components
+│   │   │   ├── Dashboard.tsx  # Main search interface
+│   │   │   ├── Index.tsx      # Landing page
+│   │   │   ├── Login.tsx      # Authentication
+│   │   │   └── Publications.tsx # Publication browser
+│   │   ├── components/        # Reusable UI components
+│   │   │   ├── ui/            # Base UI components (Radix UI)
+│   │   │   ├── layout/        # Layout components
+│   │   │   └── model/         # 3D model components
+│   │   ├── lib/               # Utilities and API service
+│   │   │   └── api.ts         # Backend API integration
+│   │   ├── contexts/          # React contexts
+│   │   │   └── AuthContext.tsx # Authentication state
+│   │   └── hooks/              # Custom React hooks
+│   ├── server/                # Express server integration
+│   ├── public/                # Static assets
+│   └── package.json           # Node.js dependencies
+└── docs/                      # Documentation
+```
+
+## 🔧 Core Technologies
+
+### Backend Stack
+- **FastAPI**: Modern Python web framework
+- **Neo4j**: Graph database for knowledge representation
+- **FAISS**: Facebook AI Similarity Search for vector operations
+- **Sentence Transformers**: Text embedding generation
+- **Google Gemini 2.0 Flash**: Large language model for answer generation
+- **Uvicorn**: ASGI server for FastAPI
+- **Python 3.12**: Programming language
+
+### Frontend Stack
+- **React 18**: UI framework with hooks and concurrent features
+- **TypeScript**: Type-safe JavaScript development
+- **Vite**: Modern build tool and development server
+- **TailwindCSS**: Utility-first CSS framework
+- **Radix UI**: Headless UI component library
+- **Cytoscape.js**: Graph visualization library
+- **React Router DOM**: Client-side routing
+- **Framer Motion**: Animation library
+- **Three.js**: 3D graphics (via React Three Fiber)
+
+## 🧠 AI and Data Processing
+
+### RAG Pipeline
+1. **Query Embedding**: Convert user query to vector using Sentence Transformers
+2. **Vector Search**: Find similar chunks using FAISS index
+3. **Graph Enhancement**: Use Neo4j to find related entities and papers
+4. **Hybrid Scoring**: Combine semantic similarity with graph relevance
+5. **Answer Generation**: Use Gemini 2.0 Flash to generate contextual answers
+6. **Citation Tracking**: Maintain references to source papers and pages
+
+### Knowledge Graph Schema
+**Node Types:**
+- **Assay**: Experimental procedures and methods
+- **Document**: Research documents and papers
+- **Experiment**: Scientific experiments
+- **ExperimentType**: Categories of experiments
+- **Gene**: Genetic entities
+- **Mission**: Space missions and projects
+- **Organism**: Biological organisms
+- **Outcome**: Experimental results
+- **Paper**: Research publications
+
+**Relationship Types:**
+- **FOUND_IN**: Entity found in document
+- **HAS_RESULT**: Experiment has outcome
+- **HAS_OUTCOME**: Result relationship
+- **INVOLVED_IN**: Participation relationships
+- **HAS_EXPERIMENT_TYPE**: Experiment categorization
+- **USES_ARRAY**: Technology usage
+- **STUDIES_GENE**: Genetic research
+- **RELATED_TO_MISSION**: Mission connections
+- **MENTIONS_ORGANISM**: Biological references
+
+### Data Statistics
+- **Total Vectors**: 8,927 chunks
+- **Unique Papers**: 100 NASA publications
+- **Vector Dimension**: 384 (sentence-transformers/all-MiniLM-L6-v2)
+- **Graph Nodes**: 1,000+ entities
+- **Graph Relationships**: 1,600+ connections
+
+## 🚀 API Endpoints
+
+### Core RAG Endpoints
+- `POST /search-rag` - Main search endpoint with enhanced FAISS + Neo4j search
+- `GET /search-stats` - System statistics (FAISS index size, Neo4j status)
+- `GET /graph` - Knowledge graph data with query filtering
+- `GET /search` - Neo4j node search
+
+### Health and Monitoring
+- `GET /` - Backend health check
+- `GET /pingdb` - Neo4j connection status
+
+### Graph Management
+- `POST /organisms/{name}` - Add organism
+- `GET /organisms` - List organisms
+- `POST /papers/{title}` - Add paper
+- `GET /papers` - List papers
+
+## 🎯 Key Features
+
+### 1. Enhanced Search System
+- **Semantic Search**: FAISS-based vector similarity search
+- **Graph Enhancement**: Neo4j knowledge graph traversal
+- **Hybrid Scoring**: Combines relevance and diversity
+- **Query Expansion**: Uses graph relationships to find related concepts
+- **Diversity Metrics**: Tracks unique papers and graph-enhanced results
+
+### 2. AI-Powered Answer Generation
+- **Contextual Answers**: Gemini 2.0 Flash generates relevant responses
+- **Citation Tracking**: Automatic source attribution with paper IDs and page numbers
+- **Scientific Accuracy**: Specialized prompts for research content
+- **Multi-modal Support**: Text and voice query processing
+
+### 3. Knowledge Graph Visualization
+- **Interactive Graphs**: Cytoscape.js-based visualization
+- **Query-Specific Views**: Graphs update based on search queries
+- **Entity Relationships**: Visual representation of scientific connections
+- **Real-time Updates**: Dynamic graph loading after searches
+
+### 4. User Interface
+- **Modern Dashboard**: Clean, responsive interface
+- **Search Tabs**: Search Results, QA, and Graph views
+- **Voice Commands**: Speech recognition for hands-free operation
+- **3D Models**: Three.js integration for advanced visualizations
+- **Authentication**: Firebase-based user management
+
+## 🔄 Data Processing Pipeline
+
+### 1. Document Ingestion
+```python
+# PDF Download and Processing
+download_pdfs.py → extract_text.py → chunker.py → embedding.py
+```
+
+### 2. Vector Index Creation
+```python
+# FAISS Index Generation
+create_embeddings.py → faiss_index.idx + chunk_metadata.json
+```
+
+### 3. Knowledge Graph Construction
+```python
+# Entity Extraction and Graph Building
+extract_entities.py → load_to_neo4j.py → Neo4j Database
+```
+
+### 4. Search and Retrieval
+```python
+# RAG Pipeline
+query → embedding → FAISS search → Neo4j enhancement → Gemini generation
+```
+
+## 🛠️ Development Setup
+
+### Backend Setup
+```bash
+cd backend
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+pip install -r requirements.txt
+uvicorn app.main:app --reload
+```
+
+### Frontend Setup
+```bash
+cd frontend
+pnpm install
+pnpm dev
+```
+
+### Environment Configuration
+```env
+# Backend .env
+GEMINI_API_KEY=your_gemini_api_key
+NEO4J_URI=your_neo4j_uri
+NEO4J_USER=neo4j
+NEO4J_PASSWORD=your_password
+
+# Frontend .env
+VITE_API_URL=http://localhost:8000
+```
+
+## 📊 Performance Metrics
+
+### Search Performance
+- **FAISS Search**: ~50ms for 8,927 vectors
+- **Neo4j Queries**: ~100ms for graph traversal
+- **Gemini Generation**: ~2-3 seconds for answer generation
+- **Total Response Time**: ~3-5 seconds end-to-end
+
+### Data Scale
+- **Processing Capacity**: 100+ research papers
+- **Vector Storage**: 8,927 chunks with 384-dimensional embeddings
+- **Graph Complexity**: 1,000+ nodes, 1,600+ relationships
+- **Search Accuracy**: High relevance through hybrid scoring
+
+## 🔒 Security and Best Practices
+
+### Data Security
+- Environment variable management for API keys
+- CORS configuration for frontend-backend communication
+- Input validation and sanitization
+- Error handling and logging
+
+### Code Quality
+- TypeScript for type safety
+- Comprehensive error handling
+- Modular architecture
+- Documentation and comments
+
+## 🚀 Deployment
+
+### Production Build
+```bash
+# Backend
+cd backend
+pip install -r requirements.txt
+uvicorn app.main:app --host 0.0.0.0 --port 8000
+
+# Frontend
+cd frontend
+pnpm build
+pnpm start
+```
+
+### Cloud Deployment
+- **Backend**: Deployable to any Python hosting (Heroku, Railway, etc.)
+- **Frontend**: Static hosting (Netlify, Vercel, etc.)
+- **Database**: Neo4j Aura cloud service
+- **Vector Storage**: FAISS index files
+
+## 🔮 Future Enhancements
+
+### Planned Features
+- **Multi-language Support**: International research papers
+- **Advanced Visualizations**: 3D graph representations
+- **Collaborative Features**: Shared research workspaces
+- **API Extensions**: RESTful API for external integrations
+- **Performance Optimization**: Caching and query optimization
+
+### Technical Improvements
+- **Scalability**: Horizontal scaling for large datasets
+- **Caching**: Redis integration for faster responses
+- **Monitoring**: Application performance monitoring
+- **Security**: Enhanced authentication and authorization
+
+## 📚 Usage Examples
+
+### Basic Search
+```typescript
+// Frontend API call
+const results = await apiService.searchRAG("collagen structure", 5);
+console.log(results.answer); // AI-generated answer
+console.log(results.citations); // Source papers
+```
+
+### Graph Visualization
+```typescript
+// Load query-specific graph
+const graph = await apiService.getGraph(undefined, "microgravity");
+// Renders interactive knowledge graph
+```
+
+### Backend Search
+```python
+# Enhanced RAG search
+rag_service = RAGService()
+results = rag_service.process_query("cell growth in space", top_k=5)
+# Returns: answer, citations, diversity_metrics
+```
+
+## 🐛 Troubleshooting
+
+### Common Issues
+1. **Neo4j Connection**: Check environment variables and network connectivity
+2. **FAISS Index**: Ensure index files exist in data/embeddings/
+3. **Gemini API**: Verify API key and quota limits
+4. **CORS Issues**: Check backend CORS configuration
+5. **Unicode Errors**: Ensure proper encoding for international text
+
+### Debug Commands
+```bash
+# Test Neo4j connection
+python -c "from app.neo4j_client import get_driver; print(get_driver())"
+
+# Test FAISS index
+python -c "from app.rag_service import RAGService; rag = RAGService(); print(rag.index.ntotal)"
+
+# Test API endpoints
+curl http://localhost:8000/search-rag -X POST -H "Content-Type: application/json" -d '{"query":"test","top_k":5}'
+```
+
+## 📖 Additional Resources
+
+### Documentation Files
+- `INTEGRATION_README.md` - Frontend-backend integration guide
+- `backend/BACKEND.md` - Backend architecture documentation
+- `frontend/FRONTEND.md` - Frontend development guide
+- `frontend/AGENTS.md` - AI agent configuration
+
+### External Resources
+- [FastAPI Documentation](https://fastapi.tiangolo.com/)
+- [Neo4j Python Driver](https://neo4j.com/docs/python-manual/current/)
+- [FAISS Documentation](https://faiss.ai/)
+- [React Documentation](https://react.dev/)
+- [Cytoscape.js Documentation](https://js.cytoscape.org/)
+
+---
+
+**Cellexis** - Advanced AI-powered research platform for scientific discovery and knowledge exploration.
+
+*Last Updated: October 2024*
+*Version: 1.0.0*

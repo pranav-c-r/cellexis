@@ -71,12 +71,15 @@ class ApiService {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Accept': 'application/json',
         },
         body: JSON.stringify({
           query,
           top_k: topK,
         }),
-        signal: AbortSignal.timeout(15000) // 15 second timeout for search
+        signal: AbortSignal.timeout(15000), // 15 second timeout for search
+        mode: 'cors', // Explicitly set CORS mode
+        credentials: 'omit' // Don't send credentials to avoid CORS issues
       });
 
       console.log('📡 Response status:', response.status);
@@ -95,8 +98,19 @@ class ApiService {
       const data = await response.json();
       console.log('✅ RAG search successful:', data);
       return data;
-    } catch (error) {
+    } catch (error: any) {
       console.error('❌ Error in RAG search:', error);
+      
+      // Handle specific CORS error
+      if (error.message?.includes('Failed to fetch') || error.name === 'TypeError') {
+        throw new Error('CORS Error: Unable to connect to backend. Please check if the backend allows requests from this domain.');
+      }
+      
+      // Handle timeout
+      if (error.name === 'AbortError') {
+        throw new Error('Request timeout: Backend took too long to respond.');
+      }
+      
       throw error;
     }
   }

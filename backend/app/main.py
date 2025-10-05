@@ -16,32 +16,24 @@ from gemini.gemini_utils import summarize, qa, safe_extract_kg
 app = FastAPI()
 
 # Add CORS middleware for frontend integration
+# Add CORS middleware for frontend integration
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "http://localhost:3000",
         "http://localhost:5173", 
         "http://localhost:8080",
+        "http://localhost:8081",  
         "https://cellexis-eta.vercel.app",
         "https://cellexis.vercel.app",
         "https://*.vercel.app",
-        "*"  # Allow all origins for development
+        "https://*.onrender.com",  
+        "*" 
     ],
     allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allow_headers=[
-        "Accept",
-        "Accept-Language",
-        "Content-Language",
-        "Content-Type",
-        "Authorization",
-        "X-Requested-With",
-        "Origin",
-        "Access-Control-Request-Method",
-        "Access-Control-Request-Headers",
-    ],
+    allow_methods=["*"],  # Simplified
+    allow_headers=["*"],  # Simplified
     expose_headers=["*"],
-    max_age=600,  # Cache preflight response for 10 minutes
 )
 
 # -------------------------
